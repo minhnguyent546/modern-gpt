@@ -36,10 +36,10 @@ def _add_dataset_opts(parser: argparse.ArgumentParser) -> None:
         default="fineweb_edu/train",
     )
     group.add_argument(
-        "--valid-dir",
+        "--val-dir",
         type=str,
         help="Directory contains validation shards",
-        default="fineweb_edu/valid",
+        default="fineweb_edu/val",
     )
     group.add_argument(
         "--drop-last",
@@ -291,13 +291,13 @@ def _add_common_training_opts(parser: argparse.ArgumentParser) -> None:
         default=20_000,
     )
     group.add_argument(
-        "--valid-steps",
+        "--val-steps",
         type=int,
         help="Number of validation steps",
         default=100,
     )
     group.add_argument(
-        "--valid-interval",
+        "--val-interval",
         type=int,
         help="Steps between validation",
         default=1_000,
@@ -311,7 +311,7 @@ def _add_common_training_opts(parser: argparse.ArgumentParser) -> None:
     group.add_argument(
         "--save-interval",
         type=int,
-        help="Steps between saving checkpoints (you SHOULD use the SAME value as --valid-interval for accurate training loss when resuming from previous checkpoint)",
+        help="Steps between saving checkpoints (you SHOULD use the SAME value as --val-interval for accurate training loss when resuming from previous checkpoint)",
         default=1_000,
     )
     group.add_argument(

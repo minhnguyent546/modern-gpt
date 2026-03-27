@@ -96,8 +96,8 @@ def train_model(args: argparse.Namespace) -> None:
         num_replicas=args.world_size,
         rank=args.rank,
     )
-    validation_dataset = LMDataset(
-        args.valid_dir,
+    val_dataset = LMDataset(
+        args.val_dir,
         eval_batch_size,
         args.seq_length,
         num_replicas=args.world_size,
@@ -284,18 +284,19 @@ def train_model(args: argparse.Namespace) -> None:
         )
 
     if args.do_test:
-        valid_results = eval_model(
+        val_results = eval_model(
             model=model,
             device=device,
             criterion=eval_criterion,
-            eval_dataset=validation_dataset,
-            eval_steps=args.valid_steps,
+            eval_dataset=val_dataset,
+            eval_steps=args.val_step,
             args=args,
             autocast_context=autocast_context,
         )
         master_print("** Testing results **")
-        master_print(f"Loss: {valid_results['loss']}")
-        master_print(f"Perplexity: {utils.get_perplexity(valid_results['loss'])}")
+        master_print(f"Loss: {val_results['loss']}")
+        master_print(f"Number of evaluation tokens: {val_results['num_eval_tokens']}")
+        master_print(f"Perplexity: {utils.get_perplexity(val_results['loss'])}")
         return
 
     if args.is_master:
@@ -411,24 +412,26 @@ def train_model(args: argparse.Namespace) -> None:
         running_loss.update(batch_loss, num_items_in_batch)  # pyright: ignore[reportArgumentType]
 
         # run validation
-        if (global_step + 1) % args.valid_interval == 0 or last_step:
+        if (global_step + 1) % args.val_interval == 0 or last_step:
             if args.ddp_enabled:
                 running_loss.reduce(dst=args.master_rank)
-            valid_results = eval_model(
+            val_results = eval_model(
                 model=model,
                 device=device,
                 criterion=eval_criterion,
-                eval_dataset=validation_dataset,
-                eval_steps=args.valid_steps,
+                eval_dataset=val_dataset,
+                eval_steps=args.val_steps,
                 args=args,
                 autocast_context=autocast_context,
             )
             wandb_accum_logs[-1].update({
                 "loss/train": running_loss.average,
-                "loss/valid": valid_results["loss"],
+                "loss/val": val_results["loss"],
             })
             master_print(
-                f"[step {global_step + 1} / {args.train_steps}] running_loss: {running_loss.average:0.4f} | valid loss: {valid_results['loss']:0.4f}"
+                f"[step {global_step + 1} / {args.train_steps}] running_loss: {running_loss.average:0.4f} | "
+                f"val_loss: {val_results['loss']:0.4f} | "
+                f"num_eval_tokens: {val_results['num_eval_tokens']} | "
             )
             running_loss.reset()
 
@@ -553,8 +556,14 @@ def eval_model(
     # set model in evaluation mode
     is_training = model.training
     model.eval()
+    num_eval_tokens = 0
+    eval_loader_iter = iter(eval_dataset)
+    for _ in progress_bar:
+        try:
+            input_ids, labels = next(eval_loader_iter)
+        except StopIteration:
+            break
 
-    for batch_idx, (input_ids, labels) in enumerate(eval_dataset):
         if input_ids.dim() == 3:
             assert input_ids.shape[0] == 1
             input_ids = input_ids[0]
@@ -564,27 +573,27 @@ def eval_model(
 
         input_ids = input_ids.to(device, non_blocking=True)
         labels = labels.to(device, non_blocking=True)
-        num_items_in_batch = (labels != -100).sum()
         with autocast_context:
             logits = model(input_ids)
             loss = criterion(input=logits.view(-1, logits.size(-1)), target=labels.view(-1))
 
+        num_items_in_batch = (labels != -100).sum()
+        num_eval_tokens += num_items_in_batch
         evaluation_loss.update(loss.detach(), num_items_in_batch)
         progress_bar.set_postfix({"loss": f"{loss:0.3f}"})
-        progress_bar.update()
-        if (batch_idx + 1) >= eval_steps:
-            break
 
     # set model back to the original mode
     model.train(is_training)
 
     if args.ddp_enabled:
         evaluation_loss.reduce(dst=args.master_rank)
+        num_eval_tokens = num_eval_tokens * args.world_size
 
     progress_bar.close()
 
     return {
         "loss": evaluation_loss.average,
+        "num_eval_tokens": num_eval_tokens,
     }
 
 
