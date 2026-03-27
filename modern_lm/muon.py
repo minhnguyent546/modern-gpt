@@ -3,19 +3,10 @@
 """
 Adapted from: https://github.com/KellerJordan/Muon/blob/master/muon.py
 
-Modifed to work with torch_xla
 """
 
 import torch
 import torch.distributed as dist
-
-try:
-    import torch_xla  # noqa: F401
-    import torch_xla.runtime as xr
-
-    HAVE_TORCH_XLA = True
-except ImportError:
-    HAVE_TORCH_XLA = False
 
 
 def zeropower_via_newtonschulz5(G, steps: int):
@@ -93,14 +84,8 @@ class Muon(torch.optim.Optimizer):
         params = sorted(params, key=lambda x: x.size(), reverse=True)
         super().__init__(params, defaults)
 
-        self._WORLD_SIZE = 1
-        self._RANK = 0
-        if HAVE_TORCH_XLA:
-            self._WORLD_SIZE = xr.world_size()
-            self._RANK = xr.global_ordinal()
-        elif dist.is_initialized():
-            self._WORLD_SIZE = dist.get_world_size()
-            self._RANK = dist.get_rank()
+        self._WORLD_SIZE = dist.get_world_size()
+        self._RANK = dist.get_rank()
 
     @torch.no_grad()
     def step(self, closure=None):
@@ -235,14 +220,8 @@ class MuonWithAuxAdam(torch.optim.Optimizer):
                 }
         super().__init__(param_groups, {})
 
-        self._WORLD_SIZE = 1
-        self._RANK = 0
-        if HAVE_TORCH_XLA:
-            self._WORLD_SIZE = xr.world_size()
-            self._RANK = xr.global_ordinal()
-        elif dist.is_initialized():
-            self._WORLD_SIZE = dist.get_world_size()
-            self._RANK = dist.get_rank()
+        self._WORLD_SIZE = dist.get_world_size()
+        self._RANK = dist.get_rank()
 
     @torch.no_grad()
     def step(self, closure=None):

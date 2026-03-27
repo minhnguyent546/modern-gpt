@@ -1,10 +1,3 @@
-"""
-GPT-2 implementation from scratch, see the original paper: Language Models are Unsupervised Multitask Learners
-references:
-  official GPT-2 implementation: https://github.com/openai/gpt-2/blob/master/src/model.py
-  nanoGPT implementation: https://github.com/karpathy/nanoGPT
-"""
-
 from __future__ import annotations
 
 import math
@@ -17,7 +10,7 @@ import torch.nn as nn
 import torch.nn.functional as Fun
 from torch import Tensor
 
-import gpt2.utils as utils
+import modern_lm.utils as utils
 
 USE_FLASH_ATTN = os.getenv("USE_FLASH_ATTN") == "1"
 

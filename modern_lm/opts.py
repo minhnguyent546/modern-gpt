@@ -11,16 +11,6 @@ def add_run_pretrain_opts(parser: argparse.ArgumentParser) -> None:
     _add_ddp_training_opts(parser)
 
 
-def add_run_pretrain_xla_opts(parser: argparse.ArgumentParser) -> None:
-    """Options for pre-training model with XLA devices."""
-    _add_general_opts(parser)
-    _add_dataset_opts(parser)
-    _add_model_opts(parser)
-    _add_wandb_opts(parser)
-    _add_common_training_opts(parser)
-    _add_xla_training_opts(parser)
-
-
 def _add_general_opts(parser: argparse.ArgumentParser) -> None:
     group = parser.add_argument_group("General")
     group.add_argument(
@@ -350,25 +340,4 @@ def _add_ddp_training_opts(parser: argparse.ArgumentParser) -> None:
         type=str,
         help="DDP backend used for distributed training",
         default="nccl",
-    )
-
-
-def _add_xla_training_opts(parser: argparse.ArgumentParser) -> None:
-    group = parser.add_argument_group("XLA training")
-    group.add_argument(
-        "--mp-start-method",
-        type=str,
-        choices=["fork", "spawn"],
-        help="Multiprocessing start method",
-        default="fork",
-    )
-    group.add_argument(
-        "--ddp",
-        help="Use distributed data parallel for gradient reducing",
-        action="store_true",
-    )
-    group.add_argument(
-        "--use-syncfree-optim",
-        help="Use sync-free optimizer version for better performance when using mixed precision training",
-        action="store_true",
     )

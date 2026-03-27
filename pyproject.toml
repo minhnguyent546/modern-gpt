@@ -1,9 +1,12 @@
 [project]
-name = "pre-training-gpt2"
+name = "modern-lm"
 version = "0.1.0"
-description = "Pre-training GPT-2 model from scratch using GPUs and TPUs."
+description = "Modern Language Modeling."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
+authors = [
+  {name = "Minh-Thien Nguyen", email = "minhnguyent546@gmail.com"},
+]
 dependencies = [
     "numpy<2.4.0",
     "PyYAML>=6.0.1",
@@ -17,6 +20,9 @@ dependencies = [
     "kernels>=0.12.3",
 ]
 
+[project.urls]
+Repository = "https://github.com/minhnguyent546/modern-lm"
+
 [dependency-groups]
 dev = [
     "colorama>=0.4.6",
@@ -26,14 +32,9 @@ dev = [
     "transformers<5.0.0",
 ]
 
-[project.optional-dependencies]
-xla = [
-    "torch_xla[tpu,pallas]==2.8.0",
-]
-
 [tool.ruff]
 line-length = 99
-target-version = "py310"
+target-version = "py312"
 exclude = [
     "./thirdparty/",
     "./notebooks/",

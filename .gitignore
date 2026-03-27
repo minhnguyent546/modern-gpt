@@ -3,6 +3,10 @@ __pycache__
 .ipynb_checkpoints
 /notebooks
 
+# data and checkpoints
+/data
+/checkpoints
+
 # local files
 _*
 !__init__.py
@@ -10,4 +14,3 @@ _*
 /wandb
 .venv*
 /TODO.md
-/gpt2/draft.py

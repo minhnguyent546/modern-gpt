@@ -15,15 +15,7 @@ import torch.nn.functional as Fun
 import yaml
 from torch import Tensor
 
-try:
-    import torch_xla  # noqa: F401
-    import torch_xla.amp.syncfree as xla_syncfree
-
-    HAVE_TORCH_XLA = True
-except ImportError:
-    HAVE_TORCH_XLA = False
-
-from gpt2.muon import MuonWithAuxAdam
+from modern_lm.muon import MuonWithAuxAdam
 
 
 def set_seed(seed: int = 0x3F3F3F3F):
@@ -78,10 +70,6 @@ def ensure_dir(path: str) -> str:
     return path
 
 
-def is_xla_device(device: torch.device | None) -> bool:
-    return device is not None and device.type == "xla"
-
-
 def make_optimizer(
     model,
     device: torch.device,
@@ -90,7 +78,6 @@ def make_optimizer(
     betas: tuple[float, float] = (0.9, 0.999),
     eps: float = 1e-8,
     weight_decay: float = 0.0,
-    use_syncfree_optim: bool = False,
     muon_lr: float | None = None,
 ) -> torch.optim.Optimizer:
     optim_type = optim_type.lower()
@@ -134,12 +121,6 @@ def make_optimizer(
         ]
         optimizer = MuonWithAuxAdam(param_groups)
     elif optim_type in ("adam", "adamw"):
-        if use_syncfree_optim and not HAVE_TORCH_XLA:
-            raise ValueError(
-                "Sync-free optimizer requires torch_xla.amp.syncfree, but it is unavailable. "
-                "Install torch-xla or disable `use_syncfree_optim`."
-            )
-
         embed_names = {"token_embedding"}
         embed_params = []
         other_decay = []
@@ -158,11 +139,9 @@ def make_optimizer(
         ]
 
         if optim_type == "adam":
-            adam_optim = xla_syncfree.Adam if use_syncfree_optim else torch.optim.Adam
-            optimizer = adam_optim(param_groups, betas=betas, eps=eps, fused=use_fused_impl)
+            optimizer = torch.optim.Adam(param_groups, betas=betas, eps=eps, fused=use_fused_impl)
         else:
-            adamw_optim = xla_syncfree.AdamW if use_syncfree_optim else torch.optim.AdamW
-            optimizer = adamw_optim(param_groups, betas=betas, eps=eps, fused=use_fused_impl)
+            optimizer = torch.optim.AdamW(param_groups, betas=betas, eps=eps, fused=use_fused_impl)
     else:
         raise ValueError(
             f"Unsupported optimizer type: {optim_type}. Possible values are: adam, adamw"
