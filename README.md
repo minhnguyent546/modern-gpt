@@ -36,11 +36,11 @@
 
 ### Dataset
 
-The dataset used for training can be found [here on HF](minhnguyent546/fineweb-edu-10BT-for-gpt2).
+The model is trained on the [FineWeb-Edu](https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu) dataset.
 
 ### Training
 
 ```bash
 python -m modern_lm.train \
-    --seed 42
+    --seed 1061109567
 ```
