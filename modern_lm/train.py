@@ -145,7 +145,6 @@ def train_model(args: argparse.Namespace) -> None:
     )
 
     # resume from previous checkpoint
-    pretrained_models = ["gpt2", "gpt2-medium", "gpt2-large", "gpt2-xl"]
     saved_states = None
     if args.from_checkpoint is None:
         modern_lm_config = ModernLMConfig(
@@ -161,32 +160,6 @@ def train_model(args: argparse.Namespace) -> None:
             final_logit_softcapping=args.final_logit_softcapping,
         )
         model = ModernLM(modern_lm_config)
-    elif args.from_checkpoint in pretrained_models:
-        master_print(f"Loading states from pretrained model {args.from_checkpoint}")
-        modern_lm_config = ModernLMConfig(
-            vocab_size=args.vocab_size,
-            seq_length=args.seq_length,
-            d_model=args.d_model,
-            num_layers=args.num_layers,
-            num_heads=args.num_heads,
-            d_ff=args.d_ff,
-            dropout=args.dropout,
-            tie_weights=args.tie_weights,
-            attn_logit_softcapping=args.attn_logit_softcapping,
-            final_logit_softcapping=args.final_logit_softcapping,
-        )
-        if args.ddp_enabled:
-            if args.is_local_master:
-                # make sure the checkpoint is downloaded only once by the local master process
-                model = ModernLM.from_pretrained(args.from_checkpoint, modern_lm_config)
-                dist.barrier()
-            else:
-                dist.barrier()
-                model = ModernLM.from_pretrained(args.from_checkpoint, modern_lm_config)
-        else:
-            model = ModernLM.from_pretrained(args.from_checkpoint, modern_lm_config)
-        model.truncate_seq_length(args.seq_length)
-        modern_lm_config.seq_length = args.seq_length
     else:
         master_print(f"Loading states from checkpoint {args.from_checkpoint}")
         saved_states = torch.load(args.from_checkpoint, map_location=device)
@@ -205,7 +178,8 @@ def train_model(args: argparse.Namespace) -> None:
 
     if os.getenv("USE_FLASH_ATTN") == "1":
         master_print("USE_FLASH_ATTN is set, trying to use flash attention if available")
-    master_print(model)
+
+    master_print(f"Model: {model}")
     criterion = nn.CrossEntropyLoss(reduction="sum")
     eval_criterion = nn.CrossEntropyLoss()
     learning_rate = args.learning_rate

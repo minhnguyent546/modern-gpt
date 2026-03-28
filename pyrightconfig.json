@@ -23,6 +23,7 @@
   "reportUnusedVariable": "warning",
   "reportUnknownArgumentType": "none",
   "reportConstantRedefinition": "none",
+  "reportUnnecessaryComparison": "none",
 
   // enable some strict settings
   "reportCallInDefaultInitializer": "error",

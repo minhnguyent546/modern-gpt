@@ -329,7 +329,7 @@ def _add_common_training_opts(parser: argparse.ArgumentParser) -> None:
     group.add_argument(
         "--from-checkpoint",
         type=str,
-        help="Start training from this checkpoint, use, e.g. gpt2 or gpt2-large for the pretrained model",
+        help="Start the training from this saved checkpoint",
     )
 
 
