@@ -14,7 +14,7 @@ def add_run_pretrain_opts(parser: argparse.ArgumentParser) -> None:
 def _add_general_opts(parser: argparse.ArgumentParser) -> None:
     group = parser.add_argument_group("General")
     group.add_argument(
-        "--checkpoints-dir",
+        "--checkpoints_dir",
         type=str,
         help="Directory to save model checkpoints",
         default="checkpoints",
@@ -30,19 +30,19 @@ def _add_general_opts(parser: argparse.ArgumentParser) -> None:
 def _add_dataset_opts(parser: argparse.ArgumentParser) -> None:
     group = parser.add_argument_group("Dataset")
     group.add_argument(
-        "--train-dir",
+        "--train_dir",
         type=str,
         help="Directory contains training shards",
         default="fineweb_edu/train",
     )
     group.add_argument(
-        "--val-dir",
+        "--val_dir",
         type=str,
         help="Directory contains validation shards",
         default="fineweb_edu/val",
     )
     group.add_argument(
-        "--drop-last",
+        "--drop_last",
         help="Whether to drop the last incomplete batch",
         action="store_true",
     )
@@ -51,37 +51,37 @@ def _add_dataset_opts(parser: argparse.ArgumentParser) -> None:
 def _add_model_opts(parser: argparse.ArgumentParser) -> None:
     group = parser.add_argument_group("Model")
     group.add_argument(
-        "--vocab-size",
+        "--vocab_size",
         type=int,
         help="Vocabulary size",
         default=50257,
     )
     group.add_argument(
-        "--seq-length",
+        "--seq_length",
         type=int,
         help="Maximum sequence length",
         default=512,
     )
     group.add_argument(
-        "--d-model",
+        "--d_model",
         type=int,
         help="Size of the embedding vectors",
         default=768,
     )
     group.add_argument(
-        "--num-layers",
+        "--num_layers",
         type=int,
         help="Number of hidden layers",
         default=12,
     )
     group.add_argument(
-        "--num-heads",
+        "--num_heads",
         type=int,
         help="Number of attention heads",
         default=12,
     )
     group.add_argument(
-        "--d-ff",
+        "--d_ff",
         type=int,
         help="Intermediate size of the feed-forward layers",
         default=2048,  # use 8/3 * d_model to achive the same number of parameters compare to FFN when switching to SwiGLU
@@ -93,24 +93,24 @@ def _add_model_opts(parser: argparse.ArgumentParser) -> None:
         default=0.0,
     )
     group.add_argument(
-        "--tie-weights",
+        "--tie_weights",
         action="store_true",
         help="Whether to tie weights between input and output embeddings",
     )
     group.add_argument(
-        "--rope-theta",
+        "--rope_theta",
         type=float,
         help="Theta value for RoPE",
         default=10000.0,
     )
     group.add_argument(
-        "--attn-logit-softcapping",
+        "--attn_logit_softcapping",
         type=float,
         help="Softcapping value for attention logits",
         default=0.0,  # use QK-Norm instead
     )
     group.add_argument(
-        "--final-logit-softcapping",
+        "--final_logit_softcapping",
         type=float,
         help="Softcapping value for final logits",
         default=30.0,
@@ -120,40 +120,40 @@ def _add_model_opts(parser: argparse.ArgumentParser) -> None:
 def _add_wandb_opts(parser: argparse.ArgumentParser) -> None:
     group = parser.add_argument_group("Wandb")
     group.add_argument(
-        "--wandb-logging",
+        "--wandb_logging",
         action="store_true",
         help="Enable logging to wandb",
     )
     group.add_argument(
-        "--wandb-project",
+        "--wandb_project",
         type=str,
         help="Project name",
         default="modern-lm",
     )
     group.add_argument(
-        "--wandb-name",
+        "--wandb_name",
         type=str,
         help="Experiment name",
         default="v0-baseline",
     )
     group.add_argument(
-        "--wandb-logging-interval",
+        "--wandb_logging_interval",
         type=int,
         help="Time between syncing metrics to wandb",
         default=100,
     )
     group.add_argument(
-        "--wandb-resume-id",
+        "--wandb_resume_id",
         type=str,
         help="Id to resume a run from",
     )
     group.add_argument(
-        "--wandb-notes",
+        "--wandb_notes",
         type=str,
         help="Wandb notes",
     )
     group.add_argument(
-        "--wandb-tags",
+        "--wandb_tags",
         type=str,
         help="Wandb tags",
     )
@@ -162,7 +162,7 @@ def _add_wandb_opts(parser: argparse.ArgumentParser) -> None:
 def _add_common_training_opts(parser: argparse.ArgumentParser) -> None:
     group = parser.add_argument_group("Training")
     group.add_argument(
-        "--do-test",
+        "--do_test",
         help="Run test only",
         action="store_true",
     )
@@ -172,7 +172,7 @@ def _add_common_training_opts(parser: argparse.ArgumentParser) -> None:
         action="store_true",
     )
     group.add_argument(
-        "--matmul-precision",
+        "--matmul_precision",
         type=str,
         help="Sets the internal precision of float32 matrix multiplications",
         choices=["highest", "high", "medium"],
@@ -181,39 +181,39 @@ def _add_common_training_opts(parser: argparse.ArgumentParser) -> None:
 
     # optimizer options
     group.add_argument(
-        "--optim-type",
+        "--optim_type",
         type=str,
         help="Which optimizer to use",
         choices=["adam", "adamw", "muon"],
         default="adamw",
     )
     group.add_argument(
-        "--learning-rate",
+        "--learning_rate",
         type=float,
         help="Learning rate",
         default=6.0e-4,
     )
     group.add_argument(
-        "--muon-lr",
+        "--muon_lr",
         type=float,
         help="Learning rate for Muon optimizer",
         default=6.0e-3,
     )
     group.add_argument(
-        "--adam-betas",
+        "--adam_betas",
         nargs=2,
         type=float,
         help="Optimizer beta values",
         default=[0.9, 0.999],
     )
     group.add_argument(
-        "--adam-eps",
+        "--adam_eps",
         type=float,
         help="Optimizer epsilon value",
         default=1e-8,
     )
     group.add_argument(
-        "--weight-decay",
+        "--weight_decay",
         type=float,
         help="Weight decay value",
         default=0.0,
@@ -221,38 +221,38 @@ def _add_common_training_opts(parser: argparse.ArgumentParser) -> None:
 
     # scheduler options
     group.add_argument(
-        "--lr-schedule",
+        "--lr_schedule",
         type=str,
         help="Learning rate scheduler (you might want to choose larger learning rate when using noam decay, e.g. 0.5)",
         choices=["cosine", "noam", "wsd"],
         default="wsd",
     )
     group.add_argument(
-        "--warmup-steps",
+        "--warmup_steps",
         type=int,
         help="Warmup steps for learning rate",
         default=1_000,
     )
     group.add_argument(
-        "--min-lr",
+        "--min_lr",
         type=float,
         help="Minimum learning rate (i.e. decay until this value) (for noam decay only)",
         default=6.0e-5,
     )
     group.add_argument(
-        "--stable-steps",
+        "--stable_steps",
         type=int,
         help="Number of steps to maintain constant learning rate (for wsd decay only)",
         default=15_000,
     )
     group.add_argument(
-        "--decay-steps",
+        "--decay_steps",
         type=int,
         help="Number of steps to decay learning rate (for cosine decay only)",
         default=20_000,
     )
     group.add_argument(
-        "--decay-type",
+        "--decay_type",
         type=str,
         help="Type of decay (for wsd decay only)",
         choices=["linear", "cosine", "1-sqrt"],
@@ -261,73 +261,73 @@ def _add_common_training_opts(parser: argparse.ArgumentParser) -> None:
 
     # others
     group.add_argument(
-        "--train-batch-size",
+        "--train_batch_size",
         type=int,
         help="Training batch size",
         default=8,
     )
     group.add_argument(
-        "--eval-batch-size",
+        "--eval_batch_size",
         type=int,
         help="Evaluation batch size",
         default=16,
     )
     group.add_argument(
-        "--gradient-accum-step",
+        "--gradient_accum_step",
         type=int,
         help="Gradient accumulation step",
         default=32,
     )
     group.add_argument(
-        "--mixed-precision",
+        "--mixed_precision",
         type=str,
         help="Data type for mixed precision training",
         choices=["fp16", "bf16"],
     )
     group.add_argument(
-        "--train-steps",
+        "--train_steps",
         type=int,
         help="Number of training steps (i.e. number of optimizer steps)",
         default=20_000,
     )
     group.add_argument(
-        "--val-steps",
+        "--val_steps",
         type=int,
         help="Number of validation steps",
         default=100,
     )
     group.add_argument(
-        "--val-interval",
+        "--val_interval",
         type=int,
         help="Steps between validation",
         default=1_000,
     )
     group.add_argument(
-        "--log-interval",
+        "--log_interval",
         type=int,
         help="Steps between logging to file",
         default=10,
     )
     group.add_argument(
-        "--save-interval",
+        "--save_interval",
         type=int,
         help="Steps between saving checkpoints (you SHOULD use the SAME value as --val-interval for accurate training loss when resuming from previous checkpoint)",
         default=1_000,
     )
     group.add_argument(
-        "--saved-checkpoint-limit",
+        "--saved_checkpoint_limit",
         type=int,
         help="Maximum number of saved checkpoints, when reached, the oldest checkpoints will be removed",
         default=10,
     )
     group.add_argument(
-        "--max-grad-norm",
+        "--max_grad_norm",
         type=float,
         help="Maximum gradient norm for gradient clipping (0.0 means no clipping)",
         default=0.0,
     )
     group.add_argument(
-        "--from-checkpoint",
+        "--from_checkpoint",
         type=str,
         help="Start the training from this saved checkpoint",
     )
@@ -336,7 +336,7 @@ def _add_common_training_opts(parser: argparse.ArgumentParser) -> None:
 def _add_ddp_training_opts(parser: argparse.ArgumentParser) -> None:
     group = parser.add_argument_group("DDP training")
     group.add_argument(
-        "--ddp-backend",
+        "--ddp_backend",
         type=str,
         help="DDP backend used for distributed training",
         default="nccl",
