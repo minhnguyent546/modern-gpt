@@ -15,7 +15,7 @@ import torch.nn.functional as Fun
 import yaml
 from torch import Tensor
 
-from modern_lm.muon import MuonWithAuxAdam
+from modern_gpt.muon import MuonWithAuxAdam
 
 
 def set_seed(seed: int = 0x3F3F3F3F):

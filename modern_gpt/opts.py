@@ -128,13 +128,13 @@ def _add_wandb_opts(parser: argparse.ArgumentParser) -> None:
         "--wandb-project",
         type=str,
         help="Project name",
-        default="pre-training-gpt2",
+        default="modern-gpt",
     )
     group.add_argument(
         "--wandb-name",
         type=str,
         help="Experiment name",
-        default="base",
+        default="v0-baseline",
     )
     group.add_argument(
         "--wandb-logging-interval",

@@ -10,7 +10,7 @@ import torch.nn as nn
 import torch.nn.functional as Fun
 from torch import Tensor
 
-import modern_lm.utils as utils
+import modern_gpt.utils as utils
 
 USE_FLASH_ATTN = os.getenv("USE_FLASH_ATTN") == "1"
 
@@ -59,15 +59,6 @@ def scaled_dot_product_attention(
 
     output = attention_probs @ value
     return output
-
-
-def get_device(device: torch.device | str = "auto") -> torch.device:
-    if isinstance(device, torch.device):
-        return device
-
-    if device == "auto":
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-    return torch.device(device)
 
 
 def apply_rotary_emb(x: torch.Tensor, cos: torch.Tensor, sin: torch.Tensor) -> torch.Tensor:
@@ -257,7 +248,7 @@ class SwiGLUFeedForward(nn.Module):
 
 
 @dataclass
-class GPTConfig:
+class ModernGPTConfig:
     vocab_size: int = 50257
     seq_length: int = 1024
     d_model: int = 768
@@ -272,8 +263,8 @@ class GPTConfig:
     final_logit_softcapping: float | None = None
 
 
-class GPTDecoderBlock(nn.Module):
-    def __init__(self, config: GPTConfig):
+class ModernGPTDecoderBlock(nn.Module):
+    def __init__(self, config: ModernGPTConfig):
         super().__init__()
         self.causal_self_attention = CausalMultiHeadSelfAttention(
             config.d_model,
@@ -296,13 +287,13 @@ class GPTDecoderBlock(nn.Module):
         return x
 
 
-class GPT(nn.Module):
-    def __init__(self, config: GPTConfig):
+class ModernGPT(nn.Module):
+    def __init__(self, config: ModernGPTConfig):
         super().__init__()
         self.config = config
         self.token_embedding = nn.Embedding(self.config.vocab_size, self.config.d_model)
         self.decoder_blocks = nn.Sequential(*[
-            GPTDecoderBlock(self.config) for _ in range(self.config.num_layers)
+            ModernGPTDecoderBlock(self.config) for _ in range(self.config.num_layers)
         ])
         self.lm_head = nn.Linear(self.config.d_model, self.config.vocab_size, bias=False)
 
@@ -354,7 +345,7 @@ class GPT(nn.Module):
             torch.nn.init.normal_(module.weight, mean=0.0, std=std)
 
     @classmethod
-    def from_pretrained(cls, checkpoint: str, config: GPTConfig) -> GPT:
+    def from_pretrained(cls, checkpoint: str, config: ModernGPTConfig) -> ModernGPT:
         hf_to_local_map = {
             "transformer.wte.weight": "token_embedding.weight",
             "transformer.wpe.weight": "positional_embedding.weight",
@@ -425,7 +416,7 @@ class GPT(nn.Module):
         # override default keys of checkpoint in config
         for key, value in checkpoint_config.items():
             setattr(config, key, value)
-        model = GPT(config)
+        model = ModernGPT(config)
         # openai gpt2 models do not have bias in lm_head
         model.lm_head.bias = None
         state_dict = model.state_dict()
@@ -516,7 +507,7 @@ class GPT(nn.Module):
         )
         self.positional_embedding.num_embeddings = seq_length
         for block in self.decoder_blocks:
-            if isinstance(block, GPTDecoderBlock) and hasattr(
+            if isinstance(block, ModernGPTDecoderBlock) and hasattr(
                 block.causal_self_attention, "causal_mask"
             ):
                 block.causal_self_attention.causal_mask = block.causal_self_attention.causal_mask[

@@ -1,11 +1,11 @@
-# Modern Language Modeling
+# Modern Generative Pretrained Transformer
 
 <p>
   <a href="https://pytorch.org"><img alt="Torch" src="https://img.shields.io/badge/PyTorch-2.8.0+cu128-EE4C2C.svg?style=flat&logo=pytorch"></a>
   <a href="https://www.python.org"><img alt="Python" src="https://img.shields.io/badge/python-3.12-3776AB.svg?style=flat&logo=python&logoColor=white"></a>
 </p>
 
-> Modernizing language modeling with recent advancements.
+> Modernizing Generative Pretrained Transformer with recent advancements in architecture, optimization, and training techniques.
 
 ## Getting started
 
@@ -13,8 +13,8 @@
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/minhnguyent546/modern-lm.git
-   cd modern-lm
+   git clone https://github.com/minhnguyent546/modern-gpt.git
+   cd modern-gpt
    ```
 
 2. **Set up Python environment using uv:**
@@ -31,7 +31,7 @@
 
 3. **Verify installation:**
    ```bash
-   python -m modern_lm.train --help
+   python -m modern_gpt.train --help
    ```
 
 ### Dataset
@@ -41,6 +41,6 @@ The model is trained on the [FineWeb-Edu](https://huggingface.co/datasets/Huggin
 ### Training
 
 ```bash
-python -m modern_lm.train \
+python -m modern_gpt.train \
     --seed 1061109567
 ```

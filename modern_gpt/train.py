@@ -1,5 +1,3 @@
-"""Pretraining GPT-2 with language modeling objective."""
-
 import argparse
 import os
 import subprocess
@@ -18,11 +16,11 @@ from torch.nn.modules.utils import consume_prefix_in_state_dict_if_present
 from torch.nn.parallel import DistributedDataParallel as DDP
 from tqdm.autonotebook import tqdm
 
-import modern_lm.opts as opts
-import modern_lm.utils as utils
-from modern_lm.lm_dataset import LMDataset
-from modern_lm.meters import AverageMeter
-from modern_lm.model import GPT, GPTConfig
+import modern_gpt.opts as opts
+import modern_gpt.utils as utils
+from modern_gpt.lm_dataset import LMDataset
+from modern_gpt.meters import AverageMeter
+from modern_gpt.model import ModernGPT, ModernGPTConfig
 
 
 def train_model(args: argparse.Namespace) -> None:
@@ -150,7 +148,7 @@ def train_model(args: argparse.Namespace) -> None:
     pretrained_models = ["gpt2", "gpt2-medium", "gpt2-large", "gpt2-xl"]
     saved_states = None
     if args.from_checkpoint is None:
-        gpt_config = GPTConfig(
+        modern_gpt_config = ModernGPTConfig(
             vocab_size=args.vocab_size,
             seq_length=args.seq_length,
             d_model=args.d_model,
@@ -162,10 +160,10 @@ def train_model(args: argparse.Namespace) -> None:
             attn_logit_softcapping=args.attn_logit_softcapping,
             final_logit_softcapping=args.final_logit_softcapping,
         )
-        model = GPT(gpt_config)
+        model = ModernGPT(modern_gpt_config)
     elif args.from_checkpoint in pretrained_models:
         master_print(f"Loading states from pretrained model {args.from_checkpoint}")
-        gpt_config = GPTConfig(
+        modern_gpt_config = ModernGPTConfig(
             vocab_size=args.vocab_size,
             seq_length=args.seq_length,
             d_model=args.d_model,
@@ -180,15 +178,15 @@ def train_model(args: argparse.Namespace) -> None:
         if args.ddp_enabled:
             if args.is_local_master:
                 # make sure the checkpoint is downloaded only once by the local master process
-                model = GPT.from_pretrained(args.from_checkpoint, gpt_config)
+                model = ModernGPT.from_pretrained(args.from_checkpoint, modern_gpt_config)
                 dist.barrier()
             else:
                 dist.barrier()
-                model = GPT.from_pretrained(args.from_checkpoint, gpt_config)
+                model = ModernGPT.from_pretrained(args.from_checkpoint, modern_gpt_config)
         else:
-            model = GPT.from_pretrained(args.from_checkpoint, gpt_config)
+            model = ModernGPT.from_pretrained(args.from_checkpoint, modern_gpt_config)
         model.truncate_seq_length(args.seq_length)
-        gpt_config.seq_length = args.seq_length
+        modern_gpt_config.seq_length = args.seq_length
     else:
         master_print(f"Loading states from checkpoint {args.from_checkpoint}")
         saved_states = torch.load(args.from_checkpoint, map_location=device)
@@ -198,8 +196,8 @@ def train_model(args: argparse.Namespace) -> None:
         for key in required_keys:
             if key not in saved_states:
                 raise ValueError(f'Missing key "{key}" in checkpoint')
-        gpt_config = GPTConfig(**saved_states["config"])
-        model = GPT(gpt_config)
+        modern_gpt_config = ModernGPTConfig(**saved_states["config"])
+        model = ModernGPT(modern_gpt_config)
 
     model.to(device)
     if model.config.tie_weights:
@@ -464,17 +462,17 @@ def train_model(args: argparse.Namespace) -> None:
                     "model": raw_model.state_dict(),
                     "optimizer": optimizer.state_dict(),
                     "lr_scheduler": lr_scheduler.state_dict(),
-                    "config": vars(gpt_config),
+                    "config": vars(modern_gpt_config),
                     "global_step": global_step + 1,
                 }
                 if scaler.is_enabled():
                     checkpoint_dict["scaler"] = scaler.state_dict()
                 utils.ensure_num_saved_checkpoints(
                     checkpoints_dir=args.checkpoints_dir,
-                    model_basename="gpt2",
+                    model_basename="modern-gpt",
                     limit=args.saved_checkpoint_limit,
                 )
-                model_save_path = os.path.join(checkpoints_dir, f"gpt2-{global_step + 1}.pt")
+                model_save_path = os.path.join(checkpoints_dir, f"modern-gpt-{global_step + 1}.pt")
                 torch.save(checkpoint_dict, model_save_path)
 
             if args.ddp_enabled:
@@ -521,7 +519,7 @@ def main():
 
 @torch.no_grad()
 def eval_model(
-    model: GPT | DDP,
+    model: ModernGPT | DDP,
     device: torch.device,
     criterion,
     eval_dataset,
