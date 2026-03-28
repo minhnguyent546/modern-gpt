@@ -642,7 +642,7 @@ wheels = [
 ]
 
 [[package]]
-name = "modern-gpt"
+name = "modern-lm"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

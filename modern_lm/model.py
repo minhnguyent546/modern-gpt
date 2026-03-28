@@ -10,7 +10,7 @@ import torch.nn as nn
 import torch.nn.functional as Fun
 from torch import Tensor
 
-import modern_gpt.utils as utils
+import modern_lm.utils as utils
 
 USE_FLASH_ATTN = os.getenv("USE_FLASH_ATTN") == "1"
 
@@ -248,7 +248,7 @@ class SwiGLUFeedForward(nn.Module):
 
 
 @dataclass
-class ModernGPTConfig:
+class ModernLMConfig:
     vocab_size: int = 50257
     seq_length: int = 1024
     d_model: int = 768
@@ -263,8 +263,8 @@ class ModernGPTConfig:
     final_logit_softcapping: float | None = None
 
 
-class ModernGPTDecoderBlock(nn.Module):
-    def __init__(self, config: ModernGPTConfig):
+class ModernLMDecoderBlock(nn.Module):
+    def __init__(self, config: ModernLMConfig):
         super().__init__()
         self.causal_self_attention = CausalMultiHeadSelfAttention(
             config.d_model,
@@ -287,13 +287,13 @@ class ModernGPTDecoderBlock(nn.Module):
         return x
 
 
-class ModernGPT(nn.Module):
-    def __init__(self, config: ModernGPTConfig):
+class ModernLM(nn.Module):
+    def __init__(self, config: ModernLMConfig):
         super().__init__()
         self.config = config
         self.token_embedding = nn.Embedding(self.config.vocab_size, self.config.d_model)
         self.decoder_blocks = nn.Sequential(*[
-            ModernGPTDecoderBlock(self.config) for _ in range(self.config.num_layers)
+            ModernLMDecoderBlock(self.config) for _ in range(self.config.num_layers)
         ])
         self.lm_head = nn.Linear(self.config.d_model, self.config.vocab_size, bias=False)
 
@@ -345,7 +345,7 @@ class ModernGPT(nn.Module):
             torch.nn.init.normal_(module.weight, mean=0.0, std=std)
 
     @classmethod
-    def from_pretrained(cls, checkpoint: str, config: ModernGPTConfig) -> ModernGPT:
+    def from_pretrained(cls, checkpoint: str, config: ModernLMConfig) -> ModernLM:
         hf_to_local_map = {
             "transformer.wte.weight": "token_embedding.weight",
             "transformer.wpe.weight": "positional_embedding.weight",
@@ -416,7 +416,7 @@ class ModernGPT(nn.Module):
         # override default keys of checkpoint in config
         for key, value in checkpoint_config.items():
             setattr(config, key, value)
-        model = ModernGPT(config)
+        model = ModernLM(config)
         # openai gpt2 models do not have bias in lm_head
         model.lm_head.bias = None
         state_dict = model.state_dict()
@@ -507,7 +507,7 @@ class ModernGPT(nn.Module):
         )
         self.positional_embedding.num_embeddings = seq_length
         for block in self.decoder_blocks:
-            if isinstance(block, ModernGPTDecoderBlock) and hasattr(
+            if isinstance(block, ModernLMDecoderBlock) and hasattr(
                 block.causal_self_attention, "causal_mask"
             ):
                 block.causal_self_attention.causal_mask = block.causal_self_attention.causal_mask[

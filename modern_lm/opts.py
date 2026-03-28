@@ -128,7 +128,7 @@ def _add_wandb_opts(parser: argparse.ArgumentParser) -> None:
         "--wandb-project",
         type=str,
         help="Project name",
-        default="modern-gpt",
+        default="modern-lm",
     )
     group.add_argument(
         "--wandb-name",

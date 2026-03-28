@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/microsoft/pyright/main/packages/vscode-pyright/schemas/pyrightconfig.schema.json",
   "pythonVerson": "3.12",
   "include": [
-    "modern_gpt",
+    "modern_lm",
     "scripts"
   ],
 

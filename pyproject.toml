@@ -1,7 +1,7 @@
 [project]
-name = "modern-gpt"
+name = "modern-lm"
 version = "0.1.0"
-description = "Modern Generative Pretrained Transformer."
+description = "Modernizing Language Model with recent advancements in architecture, optimization, and training techniques."
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [
@@ -21,7 +21,7 @@ dependencies = [
 ]
 
 [project.urls]
-Repository = "https://github.com/minhnguyent546/modern-gpt"
+Repository = "https://github.com/minhnguyent546/modern-lm"
 
 [dependency-groups]
 dev = [
