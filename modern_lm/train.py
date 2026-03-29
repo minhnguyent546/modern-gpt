@@ -287,7 +287,7 @@ def train_model(args: argparse.Namespace) -> None:
             print(
                 f"HellaSwag: {hellaswag_result['accuracy']=:0.3%} \n"
                 f"({hellaswag_result['n_correct']=} out of {hellaswag_result['n_count']=} tasks "
-                f"in {utils.to_hms(hellaswag_result['second'])})"
+                f"in {utils.to_hms(hellaswag_result['seconds'])})"
             )
         return
 
