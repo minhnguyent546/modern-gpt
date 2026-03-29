@@ -16,6 +16,7 @@ import torch.nn.functional as Fun
 from datasets import load_dataset
 from huggingface_hub import logging as hf_logging
 from torch import Tensor, nn
+from tqdm.autonotebook import tqdm
 from transformers import AutoTokenizer
 
 hf_logging.set_verbosity_error()
@@ -197,11 +198,14 @@ def get_sequences_for_current_rank(seq_len: int) -> list[PackedHellaswagSequence
     return sequences
 
 
-def score_hellaswag(model: nn.Module, seq_len: int) -> tuple[int, int]:
+def score_hellaswag(
+    model: nn.Module, seq_len: int, show_progress_bar: bool = False
+) -> tuple[int, int]:
     sequences = get_sequences_for_current_rank(seq_len=seq_len)
 
     n_correct, n_count = 0, 0
-    for sequence in sequences:
+    progress_bar = tqdm(sequences, desc="Eval HellaSwag", disable=not show_progress_bar)
+    for sequence in progress_bar:
         _correct, _count = score_sequence(model, sequence)
         n_correct += _correct
         n_count += _count
@@ -216,7 +220,7 @@ def score_hellaswag(model: nn.Module, seq_len: int) -> tuple[int, int]:
     return n_correct, n_count  # pyright: ignore[reportReturnType]
 
 
-def run_eval_hellaswag(model, seq_len: int) -> dict[str, Any]:
+def run_eval_hellaswag(model, seq_len: int, show_progress_bar: bool = False) -> dict[str, Any]:
     """Calculates and prints accuracy of `model` on 10042 HellaSwag validation tasks.
 
     This function takes:
@@ -235,7 +239,7 @@ def run_eval_hellaswag(model, seq_len: int) -> dict[str, Any]:
     is_training = model.training
     model.eval()
     with torch.inference_mode():
-        n_correct, n_count = score_hellaswag(model, seq_len)
+        n_correct, n_count = score_hellaswag(model, seq_len, show_progress_bar=show_progress_bar)
         accuracy = n_correct / n_count
 
     torch.cuda.synchronize()

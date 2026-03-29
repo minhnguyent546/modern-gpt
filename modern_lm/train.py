@@ -269,9 +269,12 @@ def train_model(args: argparse.Namespace) -> None:
             eval_steps=args.val_steps,
             args=args,
             autocast_context=autocast_context,
+            show_progress_bar=True,
         )
 
-        hellaswag_result = hellaswag.run_eval_hellaswag(model, seq_len=model.config.seq_length)
+        hellaswag_result = hellaswag.run_eval_hellaswag(
+            model, seq_len=raw_model.config.seq_length, show_progress_bar=True
+        )
 
         if args.is_master:
             print("** Evaluation results **")
