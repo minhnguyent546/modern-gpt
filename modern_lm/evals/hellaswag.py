@@ -66,7 +66,9 @@ def finalize_sequence(
         70  # use a smaller number than the median doc length of 94 (doc=context+one ending)
     )
     max_num_docs = ((seq_len // doc_len_min_average) // 128 + 1) * 128
-    pad_id = tokenizer.vocab_size  # can use any token id except EOT_ID which is reserved to delimit HellaSwag tasks and endings
+    pad_id = (
+        0 if EOT_ID != 0 else 1
+    )  # can use any token id except EOT_ID which is reserved to delimit HellaSwag tasks and endings
 
     # pad to seq_len
     padding_length = seq_len - len(inputs)
