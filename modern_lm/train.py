@@ -545,7 +545,7 @@ def eval_model(
     model.eval()
     num_eval_tokens = 0
     eval_loader_iter = iter(eval_dataset)
-    for _ in progress_bar:
+    for _ in range(eval_steps):
         try:
             input_ids, labels = next(eval_loader_iter)
         except StopIteration:
@@ -567,6 +567,7 @@ def eval_model(
         num_items_in_batch = (labels != -100).sum()
         num_eval_tokens += num_items_in_batch
         evaluation_loss.update(loss.detach(), num_items_in_batch)
+        progress_bar.update(1)
         progress_bar.set_postfix({"loss": f"{loss:0.3f}"})
 
     # set model back to the original mode
