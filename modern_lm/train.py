@@ -18,6 +18,7 @@ from tqdm.autonotebook import tqdm
 
 import modern_lm.opts as opts
 import modern_lm.utils as utils
+from modern_lm.evals import run_eval_hellaswag
 from modern_lm.lm_dataset import LMDataset
 from modern_lm.meters import AverageMeter
 from modern_lm.model import ModernLM, ModernLMConfig
@@ -259,8 +260,6 @@ def train_model(args: argparse.Namespace) -> None:
         )
 
     if args.run_evals_only:
-        from modern_lm.evals import hellaswag
-
         val_results = eval_model(
             model=model,
             device=device,
@@ -272,9 +271,11 @@ def train_model(args: argparse.Namespace) -> None:
             show_progress_bar=True,
         )
 
-        hellaswag_result = hellaswag.run_eval_hellaswag(
-            model,
+        hellaswag_result = run_eval_hellaswag(
+            model=model,
             seq_len=raw_model.config.seq_length,
+            rank=args.rank,
+            world_size=args.world_size,
             show_progress_bar=True,
             autocast_context=autocast_context,
         )
@@ -417,14 +418,25 @@ def train_model(args: argparse.Namespace) -> None:
                 args=args,
                 autocast_context=autocast_context,
             )
+
+            hellaswag_result = run_eval_hellaswag(
+                model=model,
+                seq_len=raw_model.config.seq_length,
+                rank=args.rank,
+                world_size=args.world_size,
+                show_progress_bar=True,
+                autocast_context=autocast_context,
+            )
             wandb_accum_logs[-1].update({
                 "loss/train": running_loss.average,
                 "loss/val": val_results["loss"],
+                "val/hellaswag": hellaswag_result["accuracy"],
             })
             master_print(
                 f"[step {global_step + 1} / {args.train_steps}] running_loss: {running_loss.average:0.4f} | "
                 f"val_loss: {val_results['loss']:0.4f} | "
                 f"num_eval_tokens: {val_results['num_eval_tokens']} | "
+                f"hellaswag_accuracy: {hellaswag_result['accuracy']:0.4f}"
             )
             running_loss.reset()
 
