@@ -18,7 +18,6 @@ from tqdm.autonotebook import tqdm
 
 import modern_lm.opts as opts
 import modern_lm.utils as utils
-from modern_lm.evals import run_eval_hellaswag
 from modern_lm.lm_dataset import LMDataset
 from modern_lm.meters import AverageMeter
 from modern_lm.model import ModernLM, ModernLMConfig
@@ -260,6 +259,8 @@ def train_model(args: argparse.Namespace) -> None:
         )
 
     if args.run_evals_only:
+        from modern_lm.evals import hellaswag
+
         val_results = eval_model(
             model=model,
             device=device,
@@ -269,7 +270,8 @@ def train_model(args: argparse.Namespace) -> None:
             args=args,
             autocast_context=autocast_context,
         )
-        hellaswag_result = run_eval_hellaswag(model, seq_len=args.seq_len)
+
+        hellaswag_result = hellaswag.run_eval_hellaswag(model, seq_len=model.config.seq_length)
 
         if args.is_master:
             print("** Evaluation results **")
