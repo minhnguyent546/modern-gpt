@@ -232,6 +232,7 @@ def run_eval_hellaswag(model, seq_len: int) -> dict[str, Any]:
     torch.cuda.synchronize()
     t0 = time.perf_counter()
 
+    is_training = model.training
     model.eval()
     with torch.inference_mode():
         n_correct, n_count = score_hellaswag(model, seq_len)
@@ -239,6 +240,8 @@ def run_eval_hellaswag(model, seq_len: int) -> dict[str, Any]:
 
     torch.cuda.synchronize()
     seconds = time.perf_counter() - t0
+
+    model.train(is_training)
 
     return {
         "accuracy": accuracy,
