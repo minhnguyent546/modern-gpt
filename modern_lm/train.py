@@ -107,7 +107,7 @@ def train_model(args: argparse.Namespace) -> None:
 
     # logging with wandb
     wandb_run = None
-    if args.is_master and args.wandb_logging:
+    if args.is_master and args.wandb_logging and not args.run_evals_only:
         wandb_run = wandb.init(
             project=args.wandb_project,
             name=args.wandb_name,
