@@ -165,12 +165,24 @@ def pack_tasks(raw_tasks: list[dict[str, Any]], seq_len: int) -> list[PackedHell
     return sequences
 
 
-def score_sequence(model: nn.Module, sequence: PackedHellaswagSequence) -> tuple[int, int]:
+def score_sequence(
+    model: nn.Module, sequence: PackedHellaswagSequence, autocast_context=None
+) -> tuple[int, int]:
     input_seq = sequence.inputs.unsqueeze(0).to(device="cuda")  # add batch dimension
     target_seq = sequence.targets.unsqueeze(0).to(device="cuda")  # add batch dimension
-    logits = model(input_seq)
+
+    if autocast_context is None:
+        from contextlib import nullcontext
+
+        autocast_context = nullcontext()
+
+    with autocast_context:
+        logits = model(input_seq)
+
     loss_per_token = Fun.cross_entropy(
-        input=logits.view(-1, logits.size(-1)), target=target_seq.view(-1), reduction="none"
+        input=logits.view(-1, logits.size(-1)).float(),
+        target=target_seq.view(-1),
+        reduction="none",
     )
 
     n_correct, n_count = 0, 0
@@ -201,14 +213,14 @@ def get_sequences_for_current_rank(seq_len: int) -> list[PackedHellaswagSequence
 
 
 def score_hellaswag(
-    model: nn.Module, seq_len: int, show_progress_bar: bool = False
+    model: nn.Module, seq_len: int, show_progress_bar: bool = False, autocast_context=None
 ) -> tuple[int, int]:
     sequences = get_sequences_for_current_rank(seq_len=seq_len)
 
     n_correct, n_count = 0, 0
     progress_bar = tqdm(sequences, desc="Eval HellaSwag", disable=not show_progress_bar)
     for sequence in progress_bar:
-        _correct, _count = score_sequence(model, sequence)
+        _correct, _count = score_sequence(model, sequence, autocast_context=autocast_context)
         n_correct += _correct
         n_count += _count
 
@@ -222,7 +234,9 @@ def score_hellaswag(
     return n_correct, n_count  # pyright: ignore[reportReturnType]
 
 
-def run_eval_hellaswag(model, seq_len: int, show_progress_bar: bool = False) -> dict[str, Any]:
+def run_eval_hellaswag(
+    model, seq_len: int, show_progress_bar: bool = False, autocast_context=None
+) -> dict[str, Any]:
     """Calculates and prints accuracy of `model` on 10042 HellaSwag validation tasks.
 
     This function takes:
@@ -241,7 +255,9 @@ def run_eval_hellaswag(model, seq_len: int, show_progress_bar: bool = False) -> 
     is_training = model.training
     model.eval()
     with torch.inference_mode():
-        n_correct, n_count = score_hellaswag(model, seq_len, show_progress_bar=show_progress_bar)
+        n_correct, n_count = score_hellaswag(
+            model, seq_len, show_progress_bar=show_progress_bar, autocast_context=autocast_context
+        )
         accuracy = n_correct / n_count
 
     torch.cuda.synchronize()

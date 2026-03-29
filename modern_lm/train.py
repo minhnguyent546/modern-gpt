@@ -273,7 +273,10 @@ def train_model(args: argparse.Namespace) -> None:
         )
 
         hellaswag_result = hellaswag.run_eval_hellaswag(
-            model, seq_len=raw_model.config.seq_length, show_progress_bar=True
+            model,
+            seq_len=raw_model.config.seq_length,
+            show_progress_bar=True,
+            autocast_context=autocast_context,
         )
 
         if args.is_master:
