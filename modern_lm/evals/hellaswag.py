@@ -188,7 +188,7 @@ def get_sequences_for_current_rank(seq_len: int) -> list[PackedHellaswagSequence
     dataset = load_dataset(
         path="Rowan/hellaswag",
         split="validation",
-        revision="6002345709e0801764318f06bf06ce1e7d1a1fe3",
+        revision="218ec52e09a7e7462a5400043bb9a69a41d06b76",
     )
     dataset = dataset.shuffle(
         seed=42
