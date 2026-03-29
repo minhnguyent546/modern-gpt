@@ -164,8 +164,8 @@ def pack_tasks(raw_tasks: list[dict[str, Any]], seq_len: int) -> list[PackedHell
 
 
 def score_sequence(model: nn.Module, sequence: PackedHellaswagSequence) -> tuple[int, int]:
-    input_seq = sequence.inputs.to(device="cuda")
-    target_seq = sequence.targets.to(device="cuda")
+    input_seq = sequence.inputs.unsqueeze(0).to(device="cuda")  # add batch dimension
+    target_seq = sequence.targets.unsqueeze(0).to(device="cuda")  # add batch dimension
     logits = model(input_seq)
     loss_per_token = Fun.cross_entropy(
         input=logits.view(-1, logits.size(-1)), target=target_seq.view(-1), reduction="none"
