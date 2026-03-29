@@ -18,6 +18,7 @@ from tqdm.autonotebook import tqdm
 
 import modern_lm.opts as opts
 import modern_lm.utils as utils
+from modern_lm.evals import run_eval_hellaswag
 from modern_lm.lm_dataset import LMDataset
 from modern_lm.meters import AverageMeter
 from modern_lm.model import ModernLM, ModernLMConfig
@@ -28,22 +29,25 @@ def train_model(args: argparse.Namespace) -> None:
     utils.set_seed(args.seed)
 
     # checkpoint dir and log file
-    checkpoints_dir_basename = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    if args.wandb_logging and args.wandb_name is not None:
-        checkpoints_dir_basename += f"-{args.wandb_name}"
+    checkpoints_dir = None
+    log_file = None
+    if not args.run_evals_only:
+        checkpoints_dir_basename = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        if args.wandb_logging and args.wandb_name is not None:
+            checkpoints_dir_basename += f"-{args.wandb_name}"
 
-    checkpoints_dir = os.path.join(
-        args.checkpoints_dir,
-        checkpoints_dir_basename,
-    )
-    os.makedirs(checkpoints_dir, exist_ok=True)
-    if args.wandb_logging and args.wandb_name is not None:
-        log_file = os.path.join(checkpoints_dir, f"{args.wandb_name}.log")
-    else:
-        log_file = os.path.join(checkpoints_dir, "training.log")
+        checkpoints_dir = os.path.join(
+            args.checkpoints_dir,
+            checkpoints_dir_basename,
+        )
+        os.makedirs(checkpoints_dir, exist_ok=True)
+        if args.wandb_logging and args.wandb_name is not None:
+            log_file = os.path.join(checkpoints_dir, f"{args.wandb_name}.log")
+        else:
+            log_file = os.path.join(checkpoints_dir, "training.log")
 
     def master_print(message: str, console: bool = True) -> None:
-        if args.is_master:
+        if args.is_master and not args.run_evals_only and log_file is not None:
             if console:
                 print(message)
             with open(log_file, "a") as f:
@@ -255,22 +259,31 @@ def train_model(args: argparse.Namespace) -> None:
             gradient_as_bucket_view=True,
         )
 
-    if args.do_test:
+    if args.run_evals_only:
         val_results = eval_model(
             model=model,
             device=device,
             criterion=eval_criterion,
             eval_dataset=val_dataset,
-            eval_steps=args.val_step,
+            eval_steps=args.val_steps,
             args=args,
             autocast_context=autocast_context,
         )
-        master_print("** Testing results **")
-        master_print(f"Loss: {val_results['loss']}")
-        master_print(f"Number of evaluation tokens: {val_results['num_eval_tokens']}")
-        master_print(f"Perplexity: {utils.get_perplexity(val_results['loss'])}")
+        hellaswag_result = run_eval_hellaswag(model, seq_len=args.seq_len)
+
+        if args.is_master:
+            print("** Evaluation results **")
+            print(f"Loss: {val_results['loss']}")
+            print(f"Number of evaluation tokens: {val_results['num_eval_tokens']}")
+            print(f"Perplexity: {utils.get_perplexity(val_results['loss'])}")
+            print(
+                f"HellaSwag: {hellaswag_result['accuracy']=:0.3%} \n"
+                f"({hellaswag_result['n_correct']=} out of {hellaswag_result['n_count']=} tasks "
+                f"in {utils.to_hms(hellaswag_result['second'])})"
+            )
         return
 
+    assert checkpoints_dir is not None
     if args.is_master:
         num_parameters = sum(param.numel() for param in model.parameters() if param.requires_grad)
         master_print(f"Model has {num_parameters / 10**6:0.2f}M parameters")

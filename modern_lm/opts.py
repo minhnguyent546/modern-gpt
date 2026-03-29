@@ -41,11 +41,6 @@ def _add_dataset_opts(parser: argparse.ArgumentParser) -> None:
         help="Directory contains validation shards",
         default="fineweb_edu/val",
     )
-    group.add_argument(
-        "--drop_last",
-        help="Whether to drop the last incomplete batch",
-        action="store_true",
-    )
 
 
 def _add_model_opts(parser: argparse.ArgumentParser) -> None:
@@ -162,8 +157,8 @@ def _add_wandb_opts(parser: argparse.ArgumentParser) -> None:
 def _add_common_training_opts(parser: argparse.ArgumentParser) -> None:
     group = parser.add_argument_group("Training")
     group.add_argument(
-        "--do_test",
-        help="Run test only",
+        "--run_evals_only",
+        help="Run evaluation only",
         action="store_true",
     )
     group.add_argument(
