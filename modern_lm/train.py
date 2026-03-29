@@ -424,7 +424,6 @@ def train_model(args: argparse.Namespace) -> None:
                 seq_len=raw_model.config.seq_length,
                 rank=args.rank,
                 world_size=args.world_size,
-                show_progress_bar=True,
                 autocast_context=autocast_context,
             )
             wandb_accum_logs[-1].update({
