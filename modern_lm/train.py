@@ -18,7 +18,12 @@ from tqdm.autonotebook import tqdm
 
 import modern_lm.opts as opts
 import modern_lm.utils as utils
-from modern_lm.evals import run_eval_hellaswag
+from modern_lm.evals import (
+    run_eval_arc_challenge,
+    run_eval_arc_easy,
+    run_eval_hellaswag,
+    run_eval_obqa,
+)
 from modern_lm.lm_dataset import LMDataset
 from modern_lm.meters import AverageMeter
 from modern_lm.model import ModernLM, ModernLMConfig
@@ -282,25 +287,35 @@ def train_model(args: argparse.Namespace) -> None:
             show_progress_bar=True,
         )
 
-        hellaswag_result = run_eval_hellaswag(
-            model=model,
-            seq_len=raw_model.config.seq_length,
-            rank=args.rank,
-            world_size=args.world_size,
-            show_progress_bar=True,
-            autocast_context=autocast_context,
-        )
+        eval_kwargs = {
+            "model": model,
+            "seq_len": raw_model.config.seq_length,
+            "rank": args.rank,
+            "world_size": args.world_size,
+            "show_progress_bar": True,
+            "autocast_context": autocast_context,
+        }
+        hellaswag_result = run_eval_hellaswag(**eval_kwargs)  # pyright: ignore[reportArgumentType]
+        obqa_result = run_eval_obqa(**eval_kwargs)  # pyright: ignore[reportArgumentType]
+        arc_easy_result = run_eval_arc_easy(**eval_kwargs)  # pyright: ignore[reportArgumentType]
+        arc_challenge_result = run_eval_arc_challenge(**eval_kwargs)  # pyright: ignore[reportArgumentType]
 
         if args.is_master:
             print("** Evaluation results **")
             print(f"Loss: {val_results['loss']}")
             print(f"Number of evaluation tokens: {val_results['num_eval_tokens']}")
             print(f"Perplexity: {utils.get_perplexity(val_results['loss'])}")
-            print(
-                f"HellaSwag: {hellaswag_result['accuracy']=:0.3%} \n"
-                f"({hellaswag_result['n_correct']=} out of {hellaswag_result['n_count']=} tasks "
-                f"in {utils.to_hms(hellaswag_result['seconds'])})"
-            )
+            for name, result in [
+                ("HellaSwag", hellaswag_result),
+                ("OpenBookQA", obqa_result),
+                ("ARC-Easy", arc_easy_result),
+                ("ARC-Challenge", arc_challenge_result),
+            ]:
+                print(
+                    f"{name}: {result['accuracy']:0.3%} "
+                    f"({result['n_correct']} / {result['n_count']} tasks "
+                    f"in {utils.to_hms(result['seconds'])})"
+                )
         return
 
     assert checkpoints_dir is not None
@@ -430,23 +445,33 @@ def train_model(args: argparse.Namespace) -> None:
                 autocast_context=autocast_context,
             )
 
-            hellaswag_result = run_eval_hellaswag(
-                model=model,
-                seq_len=raw_model.config.seq_length,
-                rank=args.rank,
-                world_size=args.world_size,
-                autocast_context=autocast_context,
-            )
+            eval_kwargs = {
+                "model": model,
+                "seq_len": raw_model.config.seq_length,
+                "rank": args.rank,
+                "world_size": args.world_size,
+                "autocast_context": autocast_context,
+            }
+            hellaswag_result = run_eval_hellaswag(**eval_kwargs)  # pyright: ignore[reportArgumentType]
+            obqa_result = run_eval_obqa(**eval_kwargs)  # pyright: ignore[reportArgumentType]
+            arc_easy_result = run_eval_arc_easy(**eval_kwargs)  # pyright: ignore[reportArgumentType]
+            arc_challenge_result = run_eval_arc_challenge(**eval_kwargs)  # pyright: ignore[reportArgumentType]
             wandb_accum_logs[-1].update({
                 "loss/train": running_loss.average,
                 "loss/val": val_results["loss"],
                 "val/hellaswag": hellaswag_result["accuracy"],
+                "val/obqa": obqa_result["accuracy"],
+                "val/arc_easy": arc_easy_result["accuracy"],
+                "val/arc_challenge": arc_challenge_result["accuracy"],
             })
             master_print(
                 f"[step {global_step + 1} / {args.train_steps}] running_loss: {running_loss.average:0.4f} | "
                 f"val_loss: {val_results['loss']:0.4f} | "
                 f"num_eval_tokens: {val_results['num_eval_tokens']} | "
-                f"hellaswag_accuracy: {hellaswag_result['accuracy']:0.4f}"
+                f"hellaswag: {hellaswag_result['accuracy']:0.4f} | "
+                f"obqa: {obqa_result['accuracy']:0.4f} | "
+                f"arc_easy: {arc_easy_result['accuracy']:0.4f} | "
+                f"arc_challenge: {arc_challenge_result['accuracy']:0.4f}"
             )
             running_loss.reset()
 
