@@ -112,6 +112,10 @@ def train_model(args: argparse.Namespace) -> None:
         num_replicas=args.world_size,
         rank=args.rank,
     )
+    if train_dataset.total_tokens is not None:
+        master_print(f"Total tokens in training dataset: {train_dataset.total_tokens}")
+    if val_dataset.total_tokens is not None:
+        master_print(f"Total tokens in validation dataset: {val_dataset.total_tokens}")
 
     # logging with wandb
     wandb_run = None

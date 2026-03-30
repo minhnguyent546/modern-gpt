@@ -34,18 +34,46 @@ class LMDataset(IterableDataset):  # pyright: ignore[reportMissingTypeArgument]
 
         self.token_per_batch = self.batch_size * self.seq_length
 
-    def __iter__(self):
+        # validate data
+        self.total_tokens = None
+        self._validate_shards()
+
+        self.reset()
+
+    def reset(self) -> None:
+        """Reset the dataset to the beginning."""
         self.shard_idx = -1
         self.ptr = self.rank * self.token_per_batch
         self._load_next_shard()
+
+    def _validate_shards(self) -> None:
+        # only run validation on master process
+        if self.rank != 0:
+            return
+
+        total_tokens = 0
+        for shard_file in self.shard_files:
+            shard = np.load(shard_file, mmap_mode="r")
+            num_shard_tokens = shard.shape[0]
+            if num_shard_tokens < self.token_per_batch + 1:
+                raise ValueError(
+                    f"Shard {shard_file} contains {num_shard_tokens} tokens, which is less than "
+                    f"the required {self.token_per_batch + 1} tokens for one batch (on a single replica)."
+                )
+            total_tokens += num_shard_tokens
+
+        self.total_tokens = total_tokens
+
+    def __iter__(self):
+        self.reset()
 
         while self.shard_idx < len(self.shard_files):
             input_ids = np.empty((self.token_per_batch,), dtype=np.uint16)
             labels = np.empty((self.token_per_batch,), dtype=np.uint16)
             num_tokens_to_fill = self.token_per_batch
-            if self.ptr + (num_tokens_to_fill + 1) - 1 >= len(self.shard):
+            if self.ptr + (num_tokens_to_fill + 1) - 1 >= self.shard.shape[0]:
                 # if we do not have enough tokens, take the remaining tokens and load the next shard
-                num_remain_tokens = len(self.shard) - self.ptr - 1
+                num_remain_tokens = self.shard.shape[0] - self.ptr - 1
                 if num_remain_tokens > 0:
                     input_ids[:num_remain_tokens] = self.shard[self.ptr : -1]
                     labels[:num_remain_tokens] = self.shard[self.ptr + 1 :]
@@ -56,7 +84,7 @@ class LMDataset(IterableDataset):  # pyright: ignore[reportMissingTypeArgument]
 
             # assume each shard contains no less than `num_tokens_to_fill + 1` tokens
             # TODO: handle this assumption
-            assert num_tokens_to_fill + 1 <= len(self.shard)
+            assert num_tokens_to_fill + 1 <= self.shard.shape[0]
             input_ids[-num_tokens_to_fill:] = self.shard[self.ptr : self.ptr + num_tokens_to_fill]
             labels[-num_tokens_to_fill:] = self.shard[
                 self.ptr + 1 : self.ptr + num_tokens_to_fill + 1
@@ -92,6 +120,6 @@ class LMDataset(IterableDataset):  # pyright: ignore[reportMissingTypeArgument]
         assert self.shard is not None
         # as we ignore the last token in each shard when filling input_ids,
         # so we need to subtract 1 from the length
-        while self.ptr >= len(self.shard) - 1:
-            self.ptr -= len(self.shard) - 1
+        while self.ptr >= self.shard.shape[0] - 1:
+            self.ptr -= self.shard.shape[0] - 1
             self._load_next_shard()
