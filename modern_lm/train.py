@@ -53,6 +53,13 @@ def train_model(args: argparse.Namespace) -> None:
             with open(log_file, "a") as f:
                 print(message, file=f)
 
+    git_info = utils.get_git_info()
+    if git_info.get("repository") is not None:
+        master_print(f"Git repository: {git_info['repository']}")
+    if git_info.get("commit_hash") is not None:
+        master_print(f"Git commit hash: {git_info['commit_hash']}")
+    if git_info.get("branch") is not None:
+        master_print(f"Git branch: {git_info['branch']}")
     master_print(f"Python version: {sys.version}")
     master_print(
         f"Pytorch version {torch.version.__version__} compiled for CUDA {torch.version.cuda}"

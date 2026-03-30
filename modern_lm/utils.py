@@ -3,6 +3,7 @@ import io
 import math
 import os
 import random
+import subprocess
 import unicodedata
 from pickle import Pickler, Unpickler
 from typing import Any, Literal
@@ -337,3 +338,30 @@ def to_hms(seconds: float) -> str:
     hours, remainder = divmod(seconds, 3600)
     minutes, secs = divmod(remainder, 60)
     return f"{int(hours)}h {int(minutes)}m {secs:.2f}s"
+
+
+def get_git_info() -> dict[str, str]:
+    info = {}
+    try:
+        git_repository = subprocess.check_output(
+            ["git", "config", "--get", "remote.origin.url"], text=True
+        ).strip()
+        info["repository"] = git_repository
+    except Exception:
+        pass
+
+    try:
+        git_commit_hash = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+        info["commit_hash"] = git_commit_hash
+    except Exception:
+        pass
+
+    try:
+        git_branch = subprocess.check_output(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"], text=True
+        ).strip()
+        info["branch"] = git_branch
+    except Exception:
+        pass
+
+    return info
