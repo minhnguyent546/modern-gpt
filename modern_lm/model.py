@@ -344,6 +344,48 @@ class ModernLM(nn.Module):
         elif isinstance(module, nn.Embedding):
             torch.nn.init.normal_(module.weight, mean=0.0, std=std)
 
+    def estimate_flops_per_token(self) -> int:
+        """Estimate FLOPs for a single forward + backward pass per token.
+
+        Based on the standard approximation from the OpenAI scaling law paper
+        (Kaplan et al., 2020) and PaLM (Chowdhery et al., 2022):
+          - Each linear layer parameter contributes ~6 FLOPs per token
+            (2 for forward matmul, 4 for backward: data grad + weight grad).
+          - Attention dot-products (QK^T and softmax@V) are not captured by
+            the parameter count and must be added separately.
+
+        Ref: https://arxiv.org/abs/2001.08361 (Appendix B),
+             https://www.adamcasson.com/posts/transformer-flops
+        """
+        config = self.config
+        head_dim = config.d_model // config.num_heads
+        # kv_dim = config.num_kv_heads * head_dim
+        kv_dim = config.d_model
+
+        # matmul FLOPs (6 * param_count for fwd+bwd)
+        # Per layer:
+        #   Attention projections: Q(d_model*d_model) + K(d_model*kv_dim)
+        #                        + V(d_model*kv_dim) + Out(d_model*d_model)
+        #   SwiGLU FFN: gate(d_model*d_ff) + up(d_model*d_ff) + down(d_ff*d_model)
+        attn_proj_params = config.d_model * (config.d_model + 2 * kv_dim + config.d_model)
+        ffn_params = 3 * config.d_model * config.d_ff
+        per_layer_params = attn_proj_params + ffn_params
+
+        # lm_head is always a matmul even when weights are tied with embedding
+        lm_head_params = config.d_model * config.vocab_size
+
+        flops = 6 * (config.num_layers * per_layer_params + lm_head_params)
+
+        # attention dot-product FLOPs
+        # Per layer per token:
+        #   Forward:  2 * d_model * seq_length  (QK^T)
+        #           + 2 * d_model * seq_length  (attn @ V)
+        #   Backward: 2x forward
+        #   Total:  12 * d_model * seq_length per layer
+        flops += config.num_layers * 12 * config.num_heads * head_dim * config.seq_length
+
+        return flops
+
     @torch.no_grad()
     def generate(
         self,
