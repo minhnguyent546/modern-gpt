@@ -361,6 +361,24 @@ def train_model(args: argparse.Namespace) -> None:
     model.train()
     optimizer.zero_grad()
     train_loader_iter = iter(train_dataset)
+
+    # Pre-fetch the first batch
+    try:
+        input_ids, labels = next(train_loader_iter)
+    except StopIteration:
+        train_loader_iter = iter(train_dataset)
+        input_ids, labels = next(train_loader_iter)
+
+    if input_ids.dim() == 3:
+        assert input_ids.shape[0] == 1
+        input_ids = input_ids[0]
+    if labels.dim() == 3:
+        assert labels.shape[0] == 1
+        labels = labels[0]
+
+    input_ids = input_ids.to(device, non_blocking=True)
+    labels = labels.to(device, non_blocking=True)
+
     training_start_time = time.perf_counter()
     while global_step < args.train_steps:
         last_step = global_step + 1 >= args.train_steps
@@ -368,25 +386,6 @@ def train_model(args: argparse.Namespace) -> None:
         batch_loss = 0.0
         step_start_time = time.perf_counter()
         for batch_idx in range(args.gradient_accum_step):
-            try:
-                input_ids, labels = next(train_loader_iter)
-            except StopIteration:
-                master_print(
-                    f"DataLoader is exhausted at step {global_step}, restarting the DataLoader for the next epoch."
-                )
-                train_loader_iter = iter(train_dataset)
-                input_ids, labels = next(train_loader_iter)
-
-            if input_ids.dim() == 3:
-                assert input_ids.shape[0] == 1
-                input_ids = input_ids[0]
-            if labels.dim() == 3:
-                assert labels.shape[0] == 1
-                labels = labels[0]
-
-            input_ids = input_ids.to(device, non_blocking=True)
-            labels = labels.to(device, non_blocking=True)
-
             # TODO: assume padding token id is -100, replace with actual padding token id if different
             num_items_in_batch += (labels != -100).sum()
 
@@ -399,8 +398,32 @@ def train_model(args: argparse.Namespace) -> None:
                 logits = model(input_ids)
                 loss = criterion(input=logits.view(-1, logits.size(-1)), target=labels.view(-1))
 
+            # Fetch the next batch from CPU and start async transfer to GPU while forward/backward is executing
+            try:
+                next_input_ids, next_labels = next(train_loader_iter)
+            except StopIteration:
+                master_print(
+                    f"DataLoader is exhausted at step {global_step}, restarting the DataLoader for the next epoch."
+                )
+                train_loader_iter = iter(train_dataset)
+                next_input_ids, next_labels = next(train_loader_iter)
+
+            if next_input_ids.dim() == 3:
+                assert next_input_ids.shape[0] == 1
+                next_input_ids = next_input_ids[0]
+            if next_labels.dim() == 3:
+                assert next_labels.shape[0] == 1
+                next_labels = next_labels[0]
+
+            next_input_ids = next_input_ids.to(device, non_blocking=True)
+            next_labels = next_labels.to(device, non_blocking=True)
+
             scaler.scale(loss).backward()
             batch_loss += loss.detach()
+
+            # Swap buffers for the next micro-step
+            input_ids = next_input_ids
+            labels = next_labels
 
         batch_loss = batch_loss / num_items_in_batch
         token_seen += tokens_per_fwdbwd
@@ -541,7 +564,7 @@ def train_model(args: argparse.Namespace) -> None:
         if (global_step + 1) % args.log_interval == 0 or last_step:
             mfu_str = f" | mfu: {mfu:0.1%}" if mfu >= 0 else ""
             master_print(
-                f"[step {global_step + 1} / {args.train_steps}] loss: {batch_loss:0.4f} | throughput: {batch_throughput:0.1f} tokens/s | grad_norm: {grad_norm_value:0.4f}{mfu_str} | token_seen: {token_seen:0.2e}",
+                f"\n[step {global_step + 1} / {args.train_steps}] loss: {batch_loss:0.4f} | throughput: {batch_throughput:0.1f} tokens/s | grad_norm: {grad_norm_value:0.4f}{mfu_str} | token_seen: {token_seen:0.2e}",
                 console=False,
             )
 
