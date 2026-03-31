@@ -319,9 +319,23 @@ def train_model(args: argparse.Namespace) -> None:
         return
 
     assert checkpoints_dir is not None
+    flops_per_token = raw_model.estimate_flops_per_token()
+    gpu_peak_flops: float | None = None
+    if getattr(args, "gpu_peak_tflops", None) is not None and args.gpu_peak_tflops > 0:
+        gpu_peak_flops = args.gpu_peak_tflops * 1e12
+    else:
+        gpu_peak_flops = utils.get_gpu_peak_flops(torch.cuda.get_device_name(device))
     if args.is_master:
         num_parameters = sum(param.numel() for param in model.parameters() if param.requires_grad)
         master_print(f"Model has {num_parameters / 10**6:0.2f}M parameters")
+        master_print(f"Estimated FLOPs per token (fwd+bwd): {flops_per_token:.2e}")
+        if gpu_peak_flops is not None:
+            master_print(f"GPU peak FLOPS (bf16): {gpu_peak_flops:.2e}")
+        else:
+            master_print(
+                "GPU peak FLOPS unknown — MFU will not be reported. "
+                "Use --gpu_peak_tflops to specify."
+            )
 
     if args.ddp_enabled:
         train_iter = tqdm(
@@ -351,9 +365,8 @@ def train_model(args: argparse.Namespace) -> None:
     while global_step < args.train_steps:
         last_step = global_step + 1 >= args.train_steps
         num_items_in_batch = torch.tensor(0, device=device)
-        batch_fb_time = 0.0  # batch forward + backward time
         batch_loss = 0.0
-        ts = time.perf_counter()
+        step_start_time = time.perf_counter()
         for batch_idx in range(args.gradient_accum_step):
             try:
                 input_ids, labels = next(train_loader_iter)
@@ -390,12 +403,6 @@ def train_model(args: argparse.Namespace) -> None:
             batch_loss += loss.detach()
 
         batch_loss = batch_loss / num_items_in_batch
-
-        if device.type == "cuda":
-            torch.cuda.synchronize()
-        batch_fb_time += time.perf_counter() - ts
-        batch_throughput = tokens_per_fwdbwd / batch_fb_time
-        batch_throughput *= args.world_size  # estimate throughput across devices
         token_seen += tokens_per_fwdbwd
 
         scaler.unscale_(optimizer)
@@ -415,6 +422,16 @@ def train_model(args: argparse.Namespace) -> None:
         scaler.update()
         optimizer.zero_grad()
 
+        if device.type == "cuda":
+            torch.cuda.synchronize()
+        step_time = time.perf_counter() - step_start_time
+        batch_throughput = tokens_per_fwdbwd / step_time
+
+        mfu = -1.0
+        if gpu_peak_flops is not None and step_time > 0:
+            per_device_tokens = tokens_per_fwdbwd / args.world_size
+            mfu = flops_per_token * per_device_tokens / step_time / gpu_peak_flops
+
         # TODO: handle the case when wandb is disabled
         wandb_accum_logs.append({
             f"learning_rate/group_{group_id}": group_lr
@@ -424,6 +441,7 @@ def train_model(args: argparse.Namespace) -> None:
             "loss/batch_loss": batch_loss,
             "grad_norm": grad_norm_value,
             "throughput": batch_throughput,
+            "mfu": mfu,
             "token_seen": token_seen,
             "step": global_step,
         })
@@ -521,16 +539,20 @@ def train_model(args: argparse.Namespace) -> None:
                 dist.barrier()
 
         if (global_step + 1) % args.log_interval == 0 or last_step:
+            mfu_str = f" | mfu: {mfu:0.1%}" if mfu >= 0 else ""
             master_print(
-                f"[step {global_step + 1} / {args.train_steps}] loss: {batch_loss:0.4f} | throughput: {batch_throughput:0.1f} tokens/s | grad_norm: {grad_norm_value:0.4f} | token_seen: {token_seen:0.2e}",
+                f"[step {global_step + 1} / {args.train_steps}] loss: {batch_loss:0.4f} | throughput: {batch_throughput:0.1f} tokens/s | grad_norm: {grad_norm_value:0.4f}{mfu_str} | token_seen: {token_seen:0.2e}",
                 console=False,
             )
 
-        train_iter.set_postfix({
+        postfix = {
             "loss": f"{batch_loss:0.3f}",
             "grad_norm": f"{grad_norm_value:0.3f}",
             "token_seen": f"{token_seen:0.2e}",
-        })
+        }
+        if mfu >= 0:
+            postfix["mfu"] = f"{mfu:0.1%}"
+        train_iter.set_postfix(postfix)
         global_step += 1
         train_iter.update()
 

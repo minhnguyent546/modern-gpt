@@ -365,3 +365,90 @@ def get_git_info() -> dict[str, str]:
         pass
 
     return info
+
+
+def get_gpu_peak_flops(device_name: str) -> float | None:
+    """
+    Hardcoded BF16 type peak flops for NVIDIA A100, H20, H100, H200, B200 GPU, 5090, 4090, 3090,
+    AMD MI250, MI300X, MI325X, MI355X, Intel PVC, and AWS Trainium/Inferentia.
+
+    Adapted from: https://github.com/pytorch/torchtitan/blob/main/torchtitan/tools/utils.py#L78.
+    """
+    try:
+        # Run the lspci command and capture the output
+        result = subprocess.run(["lspci"], stdout=subprocess.PIPE, text=True)
+        # Filter the output for lines containing both "NVIDIA" and "H100"
+        filtered_lines = [
+            line for line in result.stdout.splitlines() if "NVIDIA" in line and "H100" in line
+        ]
+        # Join all filtered lines into a single string
+        device_name = " ".join(filtered_lines) or device_name
+    except FileNotFoundError:
+        # Error running lspci, fallback to use device_name
+        pass
+    if "A100" in device_name:
+        # data from https://www.nvidia.com/en-us/data-center/a100/
+        return 312e12
+    elif "H100" in device_name:
+        # data from https://www.nvidia.com/en-us/data-center/h100/
+        # NOTE: Specifications are one-half lower without sparsity.
+        if "NVL" in device_name:
+            return 835e12
+        elif "PCIe" in device_name:
+            return 756e12
+        else:  # for H100 SXM and other variants
+            return 989e12
+    elif "H200" in device_name:
+        # data from https://www.nvidia.com/en-us/data-center/h200/
+        return 989e12
+    elif "H20" in device_name:
+        # NVIDIA H20 is a region-specific GPU variant.
+        # Since first-hand specifications do not seem to be readily available on
+        # NVIDIA's official global website, we refer to technical reports from
+        # Tom's Hardware. The peak BF16/FP16 Tensor performance is reported as
+        # 148 TFLOPS.
+        # Ref: https://www.tomshardware.com/news/
+        # nvidias-latest-regulation-compliant-gpu-for-china-has-been-delayed-to-early-next-year
+        return 148e12
+    elif "GB200" in device_name or "GB300" in device_name:
+        # Grace Blackwell Superchips (Grace CPU + Blackwell GPU)
+        # BF16 dense per GPU: 2,500 TFLOPS (half of 5,000 TFLOPS with sparsity)
+        # GB200 data from https://www.nvidia.com/en-us/data-center/dgx-gb200
+        # GB300 data from https://www.nvidia.com/en-us/data-center/dgx-gb300
+        return 2.5e15
+    elif "B200" in device_name:
+        # data from https://nvdam.widen.net/s/wwnsxrhm2w/blackwell-datasheet-3384703
+        return 2.25e15
+    elif "MI355X" in device_name:
+        # MI355X data from https://www.amd.com/en/products/accelerators/instinct/mi350/mi355x.html
+        return 2500e12
+    elif "MI300X" in device_name or "MI325X" in device_name:
+        # MI300X data from https://www.amd.com/en/products/accelerators/instinct/mi300/mi300x.html
+        # MI325X data from https://www.amd.com/en/products/accelerators/instinct/mi300/mi325x.html
+        return 1300e12
+    elif "MI250X" in device_name:
+        # data from https://www.amd.com/en/products/accelerators/instinct/mi200/mi250x.html (per GCD)
+        return 191.5e12
+    elif "Data Center GPU Max 1550" in device_name:
+        # Also known as Ponte Vecchio (PVC).
+        # data from https://www.intel.com/content/www/us/en/docs/oneapi/optimization-guide-gpu/2025-0/intel-xe-gpu-architecture.html
+        # Dot Product Accumulate Systolic (DPAS):
+        # - Freq: 1300MHz
+        # - #ops: 512
+        # Full EU mode (i.e. 512 max compute units): 340.8 TFLOPS (BF16)
+        # Standard EU mode (i.e. 448 max compute units): 298.2 TFLOPS (BF16)
+        max_comp_units = torch.xpu.get_device_properties("xpu").max_compute_units
+        return 512 * max_comp_units * 1300 * 10**6
+    elif "l40s" in device_name:
+        # data from: "https://resources.nvidia.com/en-us-l40s/l40s-datasheet-28413"
+        return 362e12
+    elif "5090" in device_name:
+        # data from: https://images.nvidia.com/aem-dam/Solutions/geforce/blackwell/nvidia-rtx-blackwell-gpu-architecture.pdf#page=47.3
+        return 209.5e12
+    elif "4090" in device_name:
+        # data from: https://images.nvidia.com/aem-dam/Solutions/geforce/ada/nvidia-ada-gpu-architecture.pdf#page=30
+        return 165.2e12
+    elif "3090" in device_name:
+        # data from: https://images.nvidia.com/aem-dam/Solutions/geforce/blackwell/nvidia-rtx-blackwell-gpu-architecture.pdf#page=47.3
+        return 71.2e12
+    return None

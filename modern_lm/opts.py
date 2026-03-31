@@ -173,6 +173,12 @@ def _add_common_training_opts(parser: argparse.ArgumentParser) -> None:
         choices=["highest", "high", "medium"],
         default="highest",
     )
+    group.add_argument(
+        "--gpu_peak_tflops",
+        type=float,
+        help="Peak bf16 tensor-core TFLOPS of the GPU (e.g. 989.5 for H100 SXM, 165.2 for RTX 4090). "
+        "Used to compute MFU. Auto-detected for common GPUs if not provided.",
+    )
 
     # optimizer options
     group.add_argument(
