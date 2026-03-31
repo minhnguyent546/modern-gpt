@@ -14,6 +14,7 @@ import torch.version
 import wandb
 from torch.nn.modules.utils import consume_prefix_in_state_dict_if_present
 from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.utils.data import DataLoader
 from tqdm.autonotebook import tqdm
 
 import modern_lm.opts as opts
@@ -360,24 +361,15 @@ def train_model(args: argparse.Namespace) -> None:
     # set model in training mode
     model.train()
     optimizer.zero_grad()
-    train_loader_iter = iter(train_dataset)
-
-    # Pre-fetch the first batch
-    try:
-        input_ids, labels = next(train_loader_iter)
-    except StopIteration:
-        train_loader_iter = iter(train_dataset)
-        input_ids, labels = next(train_loader_iter)
-
-    if input_ids.dim() == 3:
-        assert input_ids.shape[0] == 1
-        input_ids = input_ids[0]
-    if labels.dim() == 3:
-        assert labels.shape[0] == 1
-        labels = labels[0]
-
-    input_ids = input_ids.to(device, non_blocking=True)
-    labels = labels.to(device, non_blocking=True)
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=None,
+        num_workers=1,
+        pin_memory=True,
+        prefetch_factor=2,
+        persistent_workers=True,
+    )
+    train_loader_iter = iter(train_loader)
 
     training_start_time = time.perf_counter()
     while global_step < args.train_steps:
@@ -386,6 +378,25 @@ def train_model(args: argparse.Namespace) -> None:
         batch_loss = 0.0
         step_start_time = time.perf_counter()
         for batch_idx in range(args.gradient_accum_step):
+            try:
+                input_ids, labels = next(train_loader_iter)
+            except StopIteration:
+                master_print(
+                    f"DataLoader is exhausted at step {global_step}, restarting the DataLoader for the next epoch."
+                )
+                train_loader_iter = iter(train_loader)
+                input_ids, labels = next(train_loader_iter)
+
+            if input_ids.dim() == 3:
+                assert input_ids.shape[0] == 1
+                input_ids = input_ids[0]
+            if labels.dim() == 3:
+                assert labels.shape[0] == 1
+                labels = labels[0]
+
+            input_ids = input_ids.to(device, non_blocking=True)
+            labels = labels.to(device, non_blocking=True)
+
             # TODO: assume padding token id is -100, replace with actual padding token id if different
             num_items_in_batch += (labels != -100).sum()
 
@@ -398,32 +409,8 @@ def train_model(args: argparse.Namespace) -> None:
                 logits = model(input_ids)
                 loss = criterion(input=logits.view(-1, logits.size(-1)), target=labels.view(-1))
 
-            # Fetch the next batch from CPU and start async transfer to GPU while forward/backward is executing
-            try:
-                next_input_ids, next_labels = next(train_loader_iter)
-            except StopIteration:
-                master_print(
-                    f"DataLoader is exhausted at step {global_step}, restarting the DataLoader for the next epoch."
-                )
-                train_loader_iter = iter(train_dataset)
-                next_input_ids, next_labels = next(train_loader_iter)
-
-            if next_input_ids.dim() == 3:
-                assert next_input_ids.shape[0] == 1
-                next_input_ids = next_input_ids[0]
-            if next_labels.dim() == 3:
-                assert next_labels.shape[0] == 1
-                next_labels = next_labels[0]
-
-            next_input_ids = next_input_ids.to(device, non_blocking=True)
-            next_labels = next_labels.to(device, non_blocking=True)
-
             scaler.scale(loss).backward()
             batch_loss += loss.detach()
-
-            # Swap buffers for the next micro-step
-            input_ids = next_input_ids
-            labels = next_labels
 
         batch_loss = batch_loss / num_items_in_batch
         token_seen += tokens_per_fwdbwd

@@ -71,13 +71,12 @@ class LMDataset(IterableDataset):  # pyright: ignore[reportMissingTypeArgument]
             num_tokens_to_fill = self.token_per_batch
             if self.ptr + (num_tokens_to_fill + 1) - 1 >= self.shard.shape[0]:
                 # slow path: crossing shard boundary
-                input_ids = np.empty((self.token_per_batch,), dtype=np.uint16)
-                labels = np.empty((self.token_per_batch,), dtype=np.uint16)
+                # use a single contiguous int64 buffer for input_ids + 1 overlap token
+                buf = np.empty((self.token_per_batch + 1,), dtype=np.int64)
 
                 num_remain_tokens = self.shard.shape[0] - self.ptr - 1
                 if num_remain_tokens > 0:
-                    input_ids[:num_remain_tokens] = self.shard[self.ptr : -1]
-                    labels[:num_remain_tokens] = self.shard[self.ptr + 1 :]
+                    buf[:num_remain_tokens] = self.shard[self.ptr : -1]
                     num_tokens_to_fill -= num_remain_tokens
                 self.ptr = 0
                 if not self._load_next_shard():
@@ -86,36 +85,23 @@ class LMDataset(IterableDataset):  # pyright: ignore[reportMissingTypeArgument]
                 # assume each shard contains no less than `num_tokens_to_fill + 1` tokens
                 # TODO: handle this assumption
                 assert num_tokens_to_fill + 1 <= self.shard.shape[0]
-                input_ids[-num_tokens_to_fill:] = self.shard[
-                    self.ptr : self.ptr + num_tokens_to_fill
-                ]
-                labels[-num_tokens_to_fill:] = self.shard[
-                    self.ptr + 1 : self.ptr + num_tokens_to_fill + 1
+                buf[self.token_per_batch - num_tokens_to_fill :] = self.shard[
+                    self.ptr : self.ptr + num_tokens_to_fill + 1
                 ]
                 self.ptr = (
                     self.ptr + num_tokens_to_fill + self.token_per_batch * (self.num_replicas - 1)
                 )
                 self._normalize_ptr()
 
-                input_ids = (
-                    torch
-                    .from_numpy(input_ids.astype(np.int64))
-                    .view(self.batch_size, self.seq_length)
-                    .pin_memory()
-                )
-                labels = (
-                    torch
-                    .from_numpy(labels.astype(np.int64))
-                    .view(self.batch_size, self.seq_length)
-                    .pin_memory()
-                )
+                chunk_tensor = torch.from_numpy(buf)
+                input_ids = chunk_tensor[:-1].view(self.batch_size, self.seq_length)
+                labels = chunk_tensor[1:].view(self.batch_size, self.seq_length)
                 yield input_ids, labels
             else:
-                # fast path: single shard
-                chunk = self.shard[self.ptr : self.ptr + self.token_per_batch + 1]
-
-                # copy from mmap to memory, cast to int32 (for speed), then wrap into long tensor and pin
-                chunk_tensor = torch.tensor(chunk.astype(np.int32), dtype=torch.long).pin_memory()
+                # fast path: single shard — one copy from mmap uint16 directly to int64
+                chunk_tensor = torch.from_numpy(
+                    self.shard[self.ptr : self.ptr + self.token_per_batch + 1].astype(np.int64)
+                )
 
                 input_ids = chunk_tensor[:-1].view(self.batch_size, self.seq_length)
                 labels = chunk_tensor[1:].view(self.batch_size, self.seq_length)
