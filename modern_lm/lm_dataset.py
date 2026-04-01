@@ -69,14 +69,15 @@ class LMDataset(IterableDataset):  # pyright: ignore[reportMissingTypeArgument]
 
         while self.shard_idx < len(self.shard_files):
             num_tokens_to_fill = self.token_per_batch
+            # we need to fill `num_tokens_to_fill + 1` tokens into the buffer `buf`
             if self.ptr + (num_tokens_to_fill + 1) - 1 >= self.shard.shape[0]:
                 # slow path: crossing shard boundary
                 # use a single contiguous int64 buffer for input_ids + 1 overlap token
                 buf = np.empty((self.token_per_batch + 1,), dtype=np.int64)
 
-                num_remain_tokens = self.shard.shape[0] - self.ptr - 1
+                num_remain_tokens = self.shard.shape[0] - self.ptr
                 if num_remain_tokens > 0:
-                    buf[:num_remain_tokens] = self.shard[self.ptr : -1]
+                    buf[:num_remain_tokens] = self.shard[self.ptr :]
                     num_tokens_to_fill -= num_remain_tokens
                 self.ptr = 0
                 if not self._load_next_shard():
@@ -125,8 +126,6 @@ class LMDataset(IterableDataset):  # pyright: ignore[reportMissingTypeArgument]
     def _normalize_ptr(self) -> None:
         """self.ptr may exceed the length of the shard, so we need to take care of that."""
         assert self.shard is not None
-        # as we ignore the last token in each shard when filling input_ids,
-        # so we need to subtract 1 from the length
-        while self.ptr >= self.shard.shape[0] - 1:
-            self.ptr -= self.shard.shape[0] - 1
+        while self.ptr >= self.shard.shape[0]:
+            self.ptr -= self.shard.shape[0]
             self._load_next_shard()
