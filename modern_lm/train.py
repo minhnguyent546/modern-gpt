@@ -194,10 +194,7 @@ def train_model(args: argparse.Namespace) -> None:
                 raise ValueError(f'Missing key "{key}" in checkpoint')
         modern_lm_config = ModernLMConfig(**saved_states["config"])
         model = ModernLM(modern_lm_config)
-
     model.to(device)
-    if model.config.tie_weights:
-        model.tie_weights()
 
     if os.getenv("USE_FLASH_ATTN") == "1":
         master_print("USE_FLASH_ATTN is set, trying to use flash attention if available")

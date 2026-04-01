@@ -285,8 +285,9 @@ class SwiGLUFeedForward(nn.Module):
 
 
 class ModernLMDecoderBlock(nn.Module):
-    def __init__(self, config: ModernLMConfig):
+    def __init__(self, config: ModernLMConfig, layer_idx: int = 0):
         super().__init__()
+        self.layer_idx = layer_idx
         self.rms_norm_eps = config.rms_norm_eps
         self.causal_self_attention = CausalMultiHeadSelfAttention(
             d_model=config.d_model,
@@ -305,9 +306,19 @@ class ModernLMDecoderBlock(nn.Module):
         )
 
     def forward(self, x: Tensor) -> Tensor:
-        """see: https://github.com/openai/gpt-2/blob/master/src/model.py#L123"""
-        x = x + self.causal_self_attention(norm(x, eps=self.rms_norm_eps))
-        x = x + self.mlp(norm(x, eps=self.rms_norm_eps))
+        """see: https://github.com/openai/gpt-2/blob/master/src/model.py#L123
+
+        LayerNorm Scaling (LNS) is applied here following:
+          Sun et al. (2025), "The Curse of Depth in Large Language Models" (NeurIPS 2025)
+          https://arxiv.org/abs/2502.14698
+
+        LNS scales the Pre-LN output by 1/sqrt(layer_idx + 1) to control variance growth
+        through depth, preventing deeper layers from becoming ineffective. This replaces
+        the GPT-2 style 1/sqrt(2N) residual scaling, which is incompatible with LNS.
+        """
+        lns_scale = 1.0 / math.sqrt(self.layer_idx + 1)
+        x = x + self.causal_self_attention(norm(x, eps=self.rms_norm_eps) * lns_scale)
+        x = x + self.mlp(norm(x, eps=self.rms_norm_eps) * lns_scale)
         return x
 
 
@@ -317,7 +328,7 @@ class ModernLM(nn.Module):
         self.config = config
         self.token_embedding = nn.Embedding(self.config.vocab_size, self.config.d_model)
         self.decoder_blocks = nn.Sequential(*[
-            ModernLMDecoderBlock(self.config) for _ in range(self.config.num_layers)
+            ModernLMDecoderBlock(self.config, layer_idx=i) for i in range(self.config.num_layers)
         ])
         self.lm_head = nn.Linear(self.config.d_model, self.config.vocab_size, bias=False)
 
@@ -338,6 +349,8 @@ class ModernLM(nn.Module):
 
     def post_init(self) -> None:
         self._init_model_weights()
+        if self.config.tie_weights:
+            self.tie_weights()
 
     def tie_weights(self) -> None:
         if self.lm_head.weight.shape != self.token_embedding.weight.shape:
@@ -348,25 +361,72 @@ class ModernLM(nn.Module):
             )
         self.lm_head.weight = self.token_embedding.weight
 
-    def _init_model_weights(self, std: float = 0.02) -> None:
-        self.apply(lambda module: self._init_weights(module, std=std))
+    def _init_model_weights(self) -> None:
+        r"""Initialize weights using width-aware scaling and truncated normal.
 
-        # as in GPT-2 paper, weights of residual layers at initialization are scaled
-        # by a factor of 1/sqrt(N) where N is the number of residual layers,
-        # in this case N is equal to 2 * num_layers
-        scaling_factor = 1 / math.sqrt(2 * self.config.num_layers)
-        for param_name, param in self.named_parameters():
-            if param_name.endswith("rl_projection.weight"):
-                torch.nn.init.normal_(param, mean=0.0, std=std * scaling_factor)
+        This replaces the original GPT-2 style initialization (fixed std=0.02 with
+        1/sqrt(2N) residual scaling) with modern best practices:
 
-    def _init_weights(self, module, std: float = 0.02):
-        """ref: https://github.com/openai/gpt-2/blob/master/src/model.py#L50"""
-        if isinstance(module, nn.Linear):
-            torch.nn.init.normal_(module.weight, mean=0.0, std=std)
-            if module.bias is not None:
-                torch.nn.init.zeros_(module.bias)
-        elif isinstance(module, nn.Embedding):
-            torch.nn.init.normal_(module.weight, mean=0.0, std=std)
+        1. Width-aware std (1/sqrt(fan_in)):
+           - Yang et al. (2022), "Tensor Programs V: Tuning Large Neural Networks via
+             Zero-Shot Hyperparameter Transfer" (MuP)
+             https://arxiv.org/abs/2203.03466
+           - Lingle (2024), "A Large-Scale Exploration of mu-Transfer"
+             https://arxiv.org/abs/2406.10284
+           - Groeneveld et al. (2024), "OLMo: Accelerating the Science of Language Models"
+             https://arxiv.org/abs/2402.00838
+
+        2. FFN down projection uses 1/sqrt(d_ff) instead of 1/sqrt(d_model) to account
+           for the actual fan-in dimension (important when d_ff != 4*d_model, e.g. SwiGLU
+           with d_ff = 8/3 * d_model).
+
+        3. Truncated normal (\oplus 3\sigma) for stability, following OLMo's practice.
+
+        4. LayerNorm Scaling (LNS) replaces 1/sqrt(2N) residual scaling:
+           - Sun et al. (2025), "The Curse of Depth in Large Language Models" (NeurIPS 2025)
+             https://arxiv.org/abs/2502.14698
+           - LNS and residual scaling are incompatible; LNS is preferred for deep models.
+
+        Tied weights handling:
+           When config.tie_weights=True (default), post_init() calls tie_weights() AFTER
+           this method, which sets lm_head.weight = token_embedding.weight. This means
+           the lm_head's own initialization is discarded and both share the embedding's
+           tensor. We initialize both with std=1/sqrt(d_model) so the effective shared
+           init is consistent regardless of tie order. This is a compromise between
+           MuP's recommended embedding std=1.0 and lm_head std=1/d_model, consistent
+           with OLMo's "mitchell" init scheme.
+
+           If you untie weights, consider the full MuP split:
+             - token_embedding: std = 1.0
+             - lm_head: std = 1/d_model
+           Or Gemma's approach: scale embeddings by sqrt(d_model) in the forward pass.
+
+           References:
+           - Yao et al. (2025), "An Analysis for Reasoning Bias of Language Models with
+             Small Initialization"
+           - Team et al. (2024), "Gemma: Open Models Based on Gemini Research"
+             https://arxiv.org/abs/2403.08295
+        """
+        d_model = self.config.d_model
+        d_ff = self.config.d_ff
+        std = 1.0 / math.sqrt(d_model)
+        std_ffn_down = 1.0 / math.sqrt(d_ff)
+
+        def init_fn(module):
+            if isinstance(module, nn.Linear):
+                fan_in = module.weight.shape[1]
+                layer_std = std_ffn_down if fan_in == d_ff else std
+                torch.nn.init.trunc_normal_(
+                    module.weight, mean=0.0, std=layer_std, a=-3 * layer_std, b=3 * layer_std
+                )
+                if module.bias is not None:
+                    torch.nn.init.zeros_(module.bias)
+            elif isinstance(module, nn.Embedding):
+                torch.nn.init.trunc_normal_(
+                    module.weight, mean=0.0, std=std, a=-3 * std, b=3 * std
+                )
+
+        self.apply(init_fn)
 
     def estimate_flops_per_token(self) -> int:
         """Estimate FLOPs for a single forward + backward pass per token.
