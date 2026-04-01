@@ -95,6 +95,7 @@ def make_optimizer(
         nonhidden_params = []
         if not model.config.tie_weights:
             nonhidden_params.extend(model.lm_head.parameters())
+        embed_lr_factor = 1.0 if model.config.tie_weights else 10.0
         param_groups = [
             {
                 "params": hidden_weights,
@@ -106,7 +107,8 @@ def make_optimizer(
             {
                 "params": embed_params,
                 "use_muon": False,
-                "lr": lr * 10,  #  use 10x larger learning rate for embedding layers
+                "lr": lr
+                * embed_lr_factor,  # use larger learning rate for embedding layers if untied
                 "betas": betas,
                 "weight_decay": 0.0,
                 "eps": eps,
@@ -133,8 +135,9 @@ def make_optimizer(
                 other_decay.append(p)
             else:
                 no_decay_params.append(p)
+        embed_lr_factor = 1.0 if model.config.tie_weights else 10.0
         param_groups = [
-            {"params": embed_params, "lr": lr * 10, "weight_decay": 0.0},
+            {"params": embed_params, "lr": lr * embed_lr_factor, "weight_decay": 0.0},
             {"params": other_decay, "lr": lr, "weight_decay": weight_decay},
             {"params": no_decay_params, "lr": lr, "weight_decay": 0.0},
         ]
