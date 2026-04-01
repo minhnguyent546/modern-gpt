@@ -27,8 +27,8 @@ else:
     flash_attn_func = None
 
 
-def norm(x: Tensor) -> Tensor:
-    return Fun.rms_norm(x, (x.shape[-1],))
+def norm(x: Tensor, eps: float = 1e-5) -> Tensor:
+    return Fun.rms_norm(x, (x.shape[-1],), eps=eps)
 
 
 def softcap(x: Tensor, cap: float) -> Tensor:
@@ -132,6 +132,7 @@ class CausalMultiHeadSelfAttention(nn.Module):
         max_seq_length: int,
         rope_theta: float = 10000.0,
         softcapping: float | None = None,
+        rms_norm_eps: float = 1e-5,
     ):
         super().__init__()
         if not d_model % num_heads == 0:
@@ -142,6 +143,7 @@ class CausalMultiHeadSelfAttention(nn.Module):
         self.attention_dropout = nn.Dropout(dropout)
         self.residual_dropout = nn.Dropout(dropout)
         self.use_flash_attn = USE_FLASH_ATTN
+        self.rms_norm_eps = rms_norm_eps
 
         self.softcapping = softcapping if softcapping is not None else 0.0
         self.flash_attn_func = flash_attn_func
@@ -179,8 +181,8 @@ class CausalMultiHeadSelfAttention(nn.Module):
         v = v.view(batch_size, seq_length, self.num_heads, self.head_dim)
 
         # QK-Norm
-        q = norm(q)
-        k = norm(k)
+        q = norm(q, eps=self.rms_norm_eps)
+        k = norm(k, eps=self.rms_norm_eps)
 
         # Follow Qwen3/Gemma3 stype: applying norm and then RoPE
         cos, sin = self.rope(seq_length)
@@ -256,16 +258,17 @@ class ModernLMConfig:
     num_heads: int = 12
     d_ff: int = 2048  # use 8/3 * d_model to achive the same number of parameters compare to FFN when switching to SwiGLU
     dropout: float = 0.0
-    eps: float = 1e-7
     tie_weights: bool = True
     rope_theta: float = 10000.0
     attn_logit_softcapping: float | None = None
     final_logit_softcapping: float | None = None
+    rms_norm_eps: float = 1e-5
 
 
 class ModernLMDecoderBlock(nn.Module):
     def __init__(self, config: ModernLMConfig):
         super().__init__()
+        self.rms_norm_eps = config.rms_norm_eps
         self.causal_self_attention = CausalMultiHeadSelfAttention(
             config.d_model,
             config.num_heads,
@@ -282,8 +285,8 @@ class ModernLMDecoderBlock(nn.Module):
 
     def forward(self, x: Tensor) -> Tensor:
         """see: https://github.com/openai/gpt-2/blob/master/src/model.py#L123"""
-        x = x + self.causal_self_attention(norm(x))
-        x = x + self.mlp(norm(x))
+        x = x + self.causal_self_attention(norm(x, eps=self.rms_norm_eps))
+        x = x + self.mlp(norm(x, eps=self.rms_norm_eps))
         return x
 
 
@@ -302,7 +305,7 @@ class ModernLM(nn.Module):
     def forward(self, ids: Tensor) -> Tensor:
         token_embeddings = self.token_embedding(ids)
         x = self.decoder_blocks(token_embeddings)
-        x = norm(x)
+        x = norm(x, eps=self.config.rms_norm_eps)
         logits = self.lm_head(x)  # (batch_size, seq_length, vocab_size)
         if (
             self.config.final_logit_softcapping is not None

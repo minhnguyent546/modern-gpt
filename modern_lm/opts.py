@@ -110,6 +110,12 @@ def _add_model_opts(parser: argparse.ArgumentParser) -> None:
         help="Softcapping value for final logits",
         default=30.0,
     )
+    group.add_argument(
+        "--rms_norm_eps",
+        type=float,
+        help="Epsilon value for RMS normalization. Use larger value (e.g., 1e-5) for training stability when using mixed precision training and smaller value (e.g., 1e-7) for better performance when using full precision training",
+        default=1e-5,
+    )
 
 
 def _add_wandb_opts(parser: argparse.ArgumentParser) -> None:
