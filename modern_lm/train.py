@@ -523,13 +523,17 @@ def train_model(args: argparse.Namespace) -> None:
             if args.is_master:
                 checkpoint_dict = {
                     "model": raw_model.state_dict(),
-                    "optimizer": optimizer.state_dict(),
-                    "lr_scheduler": lr_scheduler.state_dict(),
                     "config": vars(modern_lm_config),
                     "global_step": global_step + 1,
                 }
-                if scaler.is_enabled():
-                    checkpoint_dict["scaler"] = scaler.state_dict()
+                if not args.save_model_only:
+                    checkpoint_dict.update({
+                        "optimizer": optimizer.state_dict(),
+                        "lr_scheduler": lr_scheduler.state_dict(),
+                    })  # pyright: ignore
+
+                    if scaler.is_enabled():
+                        checkpoint_dict["scaler"] = scaler.state_dict()
                 utils.ensure_num_saved_checkpoints(
                     checkpoints_dir=args.checkpoints_dir,
                     model_basename="modern-lm",
