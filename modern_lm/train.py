@@ -235,10 +235,13 @@ def train_model(args: argparse.Namespace) -> None:
             ),
         )
     elif args.lr_schedule == "wsd":
+        num_stable_steps = args.stable_steps or (
+            args.train_steps - args.warmup_steps - args.decay_steps
+        )
         lr_scheduler = utils.get_wsd_schedule(
             optimizer,
             num_warmup_steps=args.warmup_steps,
-            num_stable_steps=args.stable_steps,
+            num_stable_steps=num_stable_steps,
             num_decay_steps=args.decay_steps,
             min_lr_ratio=args.min_lr / learning_rate,
             decay_type=args.decay_type,

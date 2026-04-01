@@ -27,6 +27,24 @@ else:
     flash_attn_func = None
 
 
+@dataclass
+class ModernLMConfig:
+    vocab_size: int = 50257
+    seq_length: int = 1024
+    d_model: int = 768
+    num_layers: int = 12
+    num_heads: int = 12
+    num_kv_heads: int | None = None
+    d_ff: int = 2048  # use 8/3 * d_model to achive the same number of parameters compare to FFN when switching to SwiGLU
+    dropout: float = 0.0
+    eps: float = 1e-7
+    tie_weights: bool = True
+    rope_theta: float = 10000.0
+    attn_logit_softcapping: float | None = None
+    final_logit_softcapping: float | None = None
+    rms_norm_eps: float = 1e-5
+
+
 def norm(x: Tensor, eps: float = 1e-5) -> Tensor:
     return Fun.rms_norm(x, (x.shape[-1],), eps=eps)
 
@@ -130,16 +148,28 @@ class CausalMultiHeadSelfAttention(nn.Module):
         num_heads: int,
         dropout: float,
         max_seq_length: int,
+        num_kv_heads: int | None = None,
         rope_theta: float = 10000.0,
         softcapping: float | None = None,
         rms_norm_eps: float = 1e-5,
     ):
         super().__init__()
+        if num_kv_heads is None:
+            num_kv_heads = num_heads
+
         if not d_model % num_heads == 0:
             raise ValueError("d_model must be divisible by num_heads")
+        if num_kv_heads > num_heads:
+            raise ValueError("num_kv_heads must be less than or equal to num_heads")
+        if not num_heads % num_kv_heads == 0:
+            raise ValueError("num_heads must be divisible by num_kv_heads")
+
         self.d_model = d_model
         self.num_heads = num_heads
+        self.num_kv_heads = num_kv_heads
         self.head_dim = self.d_model // self.num_heads
+        self.num_queries_per_kv = self.num_heads // self.num_kv_heads
+
         self.attention_dropout = nn.Dropout(dropout)
         self.residual_dropout = nn.Dropout(dropout)
         self.use_flash_attn = USE_FLASH_ATTN
@@ -150,11 +180,11 @@ class CausalMultiHeadSelfAttention(nn.Module):
         if self.use_flash_attn and self.flash_attn_func is None:
             raise RuntimeError("USE_FLASH_ATTN=1 but flash-attn3 kernel is not available")
 
-        self.w_q = nn.Linear(d_model, d_model, bias=False)
-        self.w_k = nn.Linear(d_model, d_model, bias=False)
-        self.w_v = nn.Linear(d_model, d_model, bias=False)
+        self.w_q = nn.Linear(d_model, self.num_heads * self.head_dim, bias=False)
+        self.w_k = nn.Linear(d_model, self.num_kv_heads * self.head_dim, bias=False)
+        self.w_v = nn.Linear(d_model, self.num_kv_heads * self.head_dim, bias=False)
 
-        self.rl_projection = nn.Linear(d_model, d_model, bias=False)
+        self.rl_projection = nn.Linear(self.num_heads * self.head_dim, d_model, bias=False)
 
         self.rope = RotaryPositionalEmbeddings(
             self.head_dim, base_theta=rope_theta, max_seq_len=max_seq_length
@@ -175,10 +205,10 @@ class CausalMultiHeadSelfAttention(nn.Module):
         k = self.w_k(x)
         v = self.w_v(x)
 
-        # Reshape to (batch_size, seq_length, num_heads, head_dim)
+        # Reshape to (batch_size, seq_length, num_heads/num_kv_heads, head_dim)
         q = q.view(batch_size, seq_length, self.num_heads, self.head_dim)
-        k = k.view(batch_size, seq_length, self.num_heads, self.head_dim)
-        v = v.view(batch_size, seq_length, self.num_heads, self.head_dim)
+        k = k.view(batch_size, seq_length, self.num_kv_heads, self.head_dim)
+        v = v.view(batch_size, seq_length, self.num_kv_heads, self.head_dim)
 
         # QK-Norm
         q = norm(q, eps=self.rms_norm_eps)
@@ -190,6 +220,7 @@ class CausalMultiHeadSelfAttention(nn.Module):
         k = apply_rotary_emb(k, cos=cos, sin=sin)
 
         if self.use_flash_attn and self.flash_attn_func is not None:
+            # FA3 natively supports GQA if shapes match (B, S, num_heads, D) and (B, S, num_kv_heads, D)
             # FA3 does not support dropout (https://github.com/Dao-AILab/flash-attention/issues/1377#issuecomment-2529622590)
             y = self.flash_attn_func(
                 q,
@@ -198,9 +229,14 @@ class CausalMultiHeadSelfAttention(nn.Module):
                 causal=True,
                 softcap=self.softcapping,
             )
-            # returned shape is (batch_size, seq_length, num_heads, head_dim), reshape back to (batch_size, seq_length, d_model)
-            y = y.reshape(batch_size, -1, self.d_model)
+            # returned shape is (batch_size, seq_length, num_heads, head_dim), reshape back to (batch_size, seq_length, num_heads * head_dim)
+            y = y.reshape(batch_size, -1, self.num_heads * self.head_dim)
         else:
+            # For standard PyTorch SDPA, we must manually repeat KV heads if num_kv_heads < num_heads
+            if self.num_kv_heads != self.num_heads:
+                k = torch.repeat_interleave(k, self.num_queries_per_kv, dim=2)
+                v = torch.repeat_interleave(v, self.num_queries_per_kv, dim=2)
+
             mask = self.get_buffer("causal_mask")[..., :seq_length, :seq_length]
 
             y = scaled_dot_product_attention(
@@ -211,8 +247,8 @@ class CausalMultiHeadSelfAttention(nn.Module):
                 dropout=self.attention_dropout,
                 softcapping=self.softcapping,
             )
-            # returned shape is (batch_size, num_heads, seq_length, head_dim), reshape back to (batch_size, seq_length, d_model)
-            y = y.transpose(1, 2).contiguous().view(batch_size, -1, self.d_model)
+            # returned shape is (batch_size, num_heads, seq_length, head_dim), reshape back to (batch_size, seq_length, num_heads * head_dim)
+            y = y.transpose(1, 2).contiguous().view(batch_size, -1, self.num_heads * self.head_dim)
 
         y = self.residual_dropout(self.rl_projection(y))
         return y
@@ -249,37 +285,23 @@ class SwiGLUFeedForward(nn.Module):
         return x
 
 
-@dataclass
-class ModernLMConfig:
-    vocab_size: int = 50257
-    seq_length: int = 1024
-    d_model: int = 768
-    num_layers: int = 12
-    num_heads: int = 12
-    d_ff: int = 2048  # use 8/3 * d_model to achive the same number of parameters compare to FFN when switching to SwiGLU
-    dropout: float = 0.0
-    tie_weights: bool = True
-    rope_theta: float = 10000.0
-    attn_logit_softcapping: float | None = None
-    final_logit_softcapping: float | None = None
-    rms_norm_eps: float = 1e-5
-
-
 class ModernLMDecoderBlock(nn.Module):
     def __init__(self, config: ModernLMConfig):
         super().__init__()
         self.rms_norm_eps = config.rms_norm_eps
         self.causal_self_attention = CausalMultiHeadSelfAttention(
-            config.d_model,
-            config.num_heads,
-            config.dropout,
-            config.seq_length,
+            d_model=config.d_model,
+            num_heads=config.num_heads,
+            dropout=config.dropout,
+            max_seq_length=config.seq_length,
+            num_kv_heads=config.num_kv_heads,
             rope_theta=config.rope_theta,
             softcapping=config.attn_logit_softcapping,
+            rms_norm_eps=config.rms_norm_eps,
         )
         self.mlp = SwiGLUFeedForward(
-            config.d_model,
-            config.d_ff,
+            d_model=config.d_model,
+            d_ff=config.d_ff,
             dropout=config.dropout,
         )
 
@@ -362,8 +384,7 @@ class ModernLM(nn.Module):
         """
         config = self.config
         head_dim = config.d_model // config.num_heads
-        # kv_dim = config.num_kv_heads * head_dim
-        kv_dim = config.d_model
+        kv_dim = (config.num_kv_heads or config.num_heads) * head_dim
 
         # matmul FLOPs (6 * param_count for fwd+bwd)
         # Per layer:

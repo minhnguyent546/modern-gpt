@@ -76,6 +76,12 @@ def _add_model_opts(parser: argparse.ArgumentParser) -> None:
         default=12,
     )
     group.add_argument(
+        "--num_kv_heads",
+        type=int,
+        help="Number of key/value heads for Grouped-Query Attention",
+        default=4,
+    )
+    group.add_argument(
         "--d_ff",
         type=int,
         help="Intermediate size of the feed-forward layers",
@@ -249,8 +255,7 @@ def _add_common_training_opts(parser: argparse.ArgumentParser) -> None:
     group.add_argument(
         "--stable_steps",
         type=int,
-        help="Number of steps to maintain constant learning rate (for wsd decay only)",
-        default=15_000,
+        help="Number of steps to maintain constant learning rate (for wsd decay only). If not provided, the value will be inferred from --train_steps, --warup_steps and --decay_steps to make sure the learning rate will decay until min_lr at the end of training.",
     )
     group.add_argument(
         "--decay_steps",
