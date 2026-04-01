@@ -37,7 +37,6 @@ class ModernLMConfig:
     num_kv_heads: int | None = None
     d_ff: int = 2048  # use 8/3 * d_model to achive the same number of parameters compare to FFN when switching to SwiGLU
     dropout: float = 0.0
-    eps: float = 1e-7
     tie_weights: bool = True
     rope_theta: float = 10000.0
     attn_logit_softcapping: float | None = None

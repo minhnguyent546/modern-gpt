@@ -173,11 +173,14 @@ def train_model(args: argparse.Namespace) -> None:
             d_model=args.d_model,
             num_layers=args.num_layers,
             num_heads=args.num_heads,
+            num_kv_heads=args.num_kv_heads,
             d_ff=args.d_ff,
             dropout=args.dropout,
             tie_weights=args.tie_weights,
+            rope_theta=args.rope_theta,
             attn_logit_softcapping=args.attn_logit_softcapping,
             final_logit_softcapping=args.final_logit_softcapping,
+            rms_norm_eps=args.rms_norm_eps,
         )
         model = ModernLM(modern_lm_config)
     else:
