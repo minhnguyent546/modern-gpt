@@ -1,22 +1,5 @@
 # v1 (2026-03-31_07-00-01)
 
-## Model and training information
-
-- Model size: 122.68M parameters
-- Dataset: Fineweb-Edu 10BT subset
-- Number of training tokens: 2B
-- Batch size: 256
-- Sequence length: 2048
-
-## Results
-
-- Throughput: 183k tokens/s (2x4090)
-- Validation loss: 3.1388
-- HellaSwag: 30.60
-- OpenBookQA: 28.80
-- ARC-easy: 47.22
-- ARC-challenge: 28.75
-
 ## Key optimizations
 
 - Muon optimizer ([Jordan et al., 2024](https://kellerjordan.github.io/posts/muon))
@@ -28,3 +11,23 @@
 - Logits soft-capping ([Gemma Team., 2024](https://arxiv.org/pdf/2408.00118))
 - Flash Attention 3 ([Shah et al., 2024](https://tridao.me/publications/flash3/flash3.pdf))
 - RMSNorm ([Zhang et al., 2019](https://arxiv.org/abs/1910.07467))
+
+## Model and training information
+
+- Hardware: single node with 2x4090 GPUs
+- Model size: 122.68M parameters
+- Dataset: Fineweb-Edu 10BT subset
+- Batch size: 256
+- Sequence length: 2048
+- Training time 3h 21m 29.67s
+- Number tokens seen: 2B
+- Peak VRAM usage: 11865.56 MB
+
+## Results
+
+- Throughput: 183k tokens/s
+- Validation loss: 3.1388
+- HellaSwag: 30.60
+- OpenBookQA: 28.80
+- ARC-easy: 47.22
+- ARC-challenge: 28.75
