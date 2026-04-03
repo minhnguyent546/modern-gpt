@@ -120,7 +120,7 @@ def _add_model_opts(parser: argparse.ArgumentParser) -> None:
         "--layer_types",
         type=str,
         nargs="+",
-        help="Comma-separated list of layer types (e.g., 'sliding,sliding,sliding,sliding,full'). It will be repeated to match num_layers.",
+        help="List of layer types (e.g., 'sliding,sliding,sliding,sliding,full'). It will be repeated to match num_layers.",
         default=["sliding", "sliding", "sliding", "sliding", "full"],
     )
     group.add_argument(

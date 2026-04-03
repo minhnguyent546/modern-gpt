@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Callable, Literal
 
 import torch
@@ -41,13 +41,15 @@ class ModernLMConfig:
     rope_theta_full: float = 100_000.0
     rope_theta_sliding: float = 10_000.0
     sliding_window_size: int = 512
-    layer_types: list[Literal["sliding", "full"]] = [
-        "sliding",
-        "sliding",
-        "sliding",
-        "sliding",
-        "full",
-    ]
+    layer_types: list[Literal["sliding", "full"]] = field(
+        default_factory=lambda: [
+            "sliding",
+            "sliding",
+            "sliding",
+            "sliding",
+            "full",
+        ]
+    )
     partial_rotary_factor: float = 1.0  # TODO: implement partial RoPE later
     attn_logit_softcapping: float | None = None
     final_logit_softcapping: float | None = None
