@@ -99,10 +99,35 @@ def _add_model_opts(parser: argparse.ArgumentParser) -> None:
         help="Whether to tie weights between input and output embeddings",
     )
     group.add_argument(
-        "--rope_theta",
+        "--rope_theta_full",
         type=float,
-        help="Theta value for RoPE",
-        default=10000.0,
+        help="Theta value for RoPE in full attention layers",
+        default=100_000.0,
+    )
+    group.add_argument(
+        "--rope_theta_sliding",
+        type=float,
+        help="Theta value for RoPE in sliding window attention layers",
+        default=10_000.0,
+    )
+    group.add_argument(
+        "--sliding_window_size",
+        type=int,
+        help="Sliding window size for attention",
+        default=512,
+    )
+    group.add_argument(
+        "--layer_types",
+        type=str,
+        nargs="+",
+        help="Comma-separated list of layer types (e.g., 'sliding,sliding,sliding,sliding,full'). It will be repeated to match num_layers.",
+        default=["sliding", "sliding", "sliding", "sliding", "full"],
+    )
+    group.add_argument(
+        "--partial_rotary_factor",
+        type=float,
+        help="Fraction of head dimensions to apply RoPE to (1.0 = all)",
+        default=1.0,
     )
     group.add_argument(
         "--attn_logit_softcapping",

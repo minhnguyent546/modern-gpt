@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 import os
 from dataclasses import dataclass
-from typing import Callable
+from typing import Callable, Literal
 
 import torch
 import torch.nn as nn
@@ -38,7 +38,17 @@ class ModernLMConfig:
     d_ff: int = 2048  # use 8/3 * d_model to achive the same number of parameters compare to FFN when switching to SwiGLU
     dropout: float = 0.0
     tie_weights: bool = True
-    rope_theta: float = 10000.0
+    rope_theta_full: float = 100_000.0
+    rope_theta_sliding: float = 10_000.0
+    sliding_window_size: int = 512
+    layer_types: list[Literal["sliding", "full"]] = [
+        "sliding",
+        "sliding",
+        "sliding",
+        "sliding",
+        "full",
+    ]
+    partial_rotary_factor: float = 1.0  # TODO: implement partial RoPE later
     attn_logit_softcapping: float | None = None
     final_logit_softcapping: float | None = None
     rms_norm_eps: float = 1e-5
@@ -151,6 +161,7 @@ class CausalMultiHeadSelfAttention(nn.Module):
         rope_theta: float = 10000.0,
         softcapping: float | None = None,
         rms_norm_eps: float = 1e-5,
+        window_size: int = -1,
     ):
         super().__init__()
         if num_kv_heads is None:
@@ -173,6 +184,7 @@ class CausalMultiHeadSelfAttention(nn.Module):
         self.residual_dropout = nn.Dropout(dropout)
         self.use_flash_attn = USE_FLASH_ATTN
         self.rms_norm_eps = rms_norm_eps
+        self.window_size = window_size
 
         self.softcapping = softcapping if softcapping is not None else 0.0
         self.flash_attn_func = flash_attn_func
@@ -185,6 +197,7 @@ class CausalMultiHeadSelfAttention(nn.Module):
 
         self.rl_projection = nn.Linear(self.num_heads * self.head_dim, d_model, bias=False)
 
+        # TODO: implement partial RoPE later
         self.rope = RotaryPositionalEmbeddings(
             self.head_dim, base_theta=rope_theta, max_seq_len=max_seq_length
         )
@@ -221,11 +234,13 @@ class CausalMultiHeadSelfAttention(nn.Module):
         if self.use_flash_attn and self.flash_attn_func is not None:
             # FA3 natively supports GQA if shapes match (B, S, num_heads, D) and (B, S, num_kv_heads, D)
             # FA3 does not support dropout (https://github.com/Dao-AILab/flash-attention/issues/1377#issuecomment-2529622590)
+            window = (self.window_size, -1) if self.window_size > 0 else (-1, -1)
             y = self.flash_attn_func(
                 q,
                 k,
                 v,
                 causal=True,
+                window_size=window,
                 softcap=self.softcapping,
             )
             # returned shape is (batch_size, seq_length, num_heads, head_dim), reshape back to (batch_size, seq_length, num_heads * head_dim)
@@ -237,6 +252,11 @@ class CausalMultiHeadSelfAttention(nn.Module):
                 v = torch.repeat_interleave(v, self.num_queries_per_kv, dim=2)
 
             mask = self.get_buffer("causal_mask")[..., :seq_length, :seq_length]
+            if self.window_size > 0:
+                row_idx = torch.arange(seq_length, device=x.device).unsqueeze(1)
+                col_idx = torch.arange(seq_length, device=x.device).unsqueeze(0)
+                window_mask = col_idx >= (row_idx - self.window_size + 1)
+                mask = mask & window_mask.unsqueeze(0).unsqueeze(0)
 
             y = scaled_dot_product_attention(
                 q.transpose(1, 2),
@@ -285,19 +305,31 @@ class SwiGLUFeedForward(nn.Module):
 
 
 class ModernLMDecoderBlock(nn.Module):
-    def __init__(self, config: ModernLMConfig, layer_idx: int = 0):
+    def __init__(
+        self,
+        config: ModernLMConfig,
+        layer_type: Literal["sliding", "full"],
+        layer_idx: int = 0,
+    ):
         super().__init__()
         self.layer_idx = layer_idx
         self.rms_norm_eps = config.rms_norm_eps
+
+        self.window_size = -1 if layer_type == "full" else config.sliding_window_size
+        self.rope_theta = (
+            config.rope_theta_full if layer_type == "full" else config.rope_theta_sliding
+        )
+
         self.causal_self_attention = CausalMultiHeadSelfAttention(
             d_model=config.d_model,
             num_heads=config.num_heads,
             dropout=config.dropout,
             max_seq_length=config.seq_length,
             num_kv_heads=config.num_kv_heads,
-            rope_theta=config.rope_theta,
+            rope_theta=self.rope_theta,
             softcapping=config.attn_logit_softcapping,
             rms_norm_eps=config.rms_norm_eps,
+            window_size=self.window_size,
         )
         self.mlp = SwiGLUFeedForward(
             d_model=config.d_model,
@@ -310,7 +342,7 @@ class ModernLMDecoderBlock(nn.Module):
 
         LayerNorm Scaling (LNS) is applied here following:
           Sun et al. (2025), "The Curse of Depth in Large Language Models" (NeurIPS 2025)
-          https://arxiv.org/abs/2502.14698
+            https://arxiv.org/abs/2502.05795
 
         LNS scales the Pre-LN output by 1/sqrt(layer_idx + 1) to control variance growth
         through depth, preventing deeper layers from becoming ineffective. This replaces
@@ -326,9 +358,21 @@ class ModernLM(nn.Module):
     def __init__(self, config: ModernLMConfig):
         super().__init__()
         self.config = config
+
+        if len(self.config.layer_types) > self.config.num_layers:
+            raise ValueError("Length of layer_types cannot be greater than num_layers")
+
+        if len(self.config.layer_types) < self.config.num_layers:
+            if self.config.num_layers % len(self.config.layer_types) != 0:
+                raise ValueError("num_layers must be divisible by layer_types")
+
+            repeats = self.config.num_layers // len(self.config.layer_types)
+            self.config.layer_types = self.config.layer_types * repeats
+
         self.token_embedding = nn.Embedding(self.config.vocab_size, self.config.d_model)
         self.decoder_blocks = nn.Sequential(*[
-            ModernLMDecoderBlock(self.config, layer_idx=i) for i in range(self.config.num_layers)
+            ModernLMDecoderBlock(self.config, layer_type=self.config.layer_types[i], layer_idx=i)
+            for i in range(self.config.num_layers)
         ])
         self.lm_head = nn.Linear(self.config.d_model, self.config.vocab_size, bias=False)
 
@@ -384,7 +428,7 @@ class ModernLM(nn.Module):
 
         4. LayerNorm Scaling (LNS) replaces 1/sqrt(2N) residual scaling:
            - Sun et al. (2025), "The Curse of Depth in Large Language Models" (NeurIPS 2025)
-             https://arxiv.org/abs/2502.14698
+            https://arxiv.org/abs/2502.05795
            - LNS and residual scaling are incompatible; LNS is preferred for deep models.
 
         Tied weights handling:
