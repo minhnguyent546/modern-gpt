@@ -511,7 +511,13 @@ class ModernLM(nn.Module):
         #           + 2 * d_model * seq_length  (attn @ V)
         #   Backward: 2x forward
         #   Total:  12 * d_model * seq_length per layer
-        flops += config.num_layers * 12 * config.num_heads * head_dim * config.seq_length
+        attn_flops = 0
+        for layer_type in config.layer_types:
+            window = config.seq_length if layer_type == "full" else config.sliding_window_size
+            effective_seq = config.seq_length if window < 0 else min(window, config.seq_length)
+            attn_flops += 12 * config.num_heads * head_dim * effective_seq
+
+        flops += attn_flops
 
         return flops
 
