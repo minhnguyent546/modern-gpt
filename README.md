@@ -11,7 +11,8 @@
 
 | Date | Key optimizations | # Tokens | Throughput (toks/s) | Val. loss | HellaSwag | OpenBookQA | ARC-e | ARC-c |
 | :---: | --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| [v1 (2026-03-31_07-00-01)](./records/v1-2026-03-31_07-00-01/) | <ul><li>Muon optimizer ([Jordan et al., 2024](https://kellerjordan.github.io/posts/muon))</li><li>Replace learned PE with RoPE ([Su et al., 2021](https://arxiv.org/abs/2104.09864)) </li><li>Replace standard FFN with SwiGLU</li><li>Use 10x learger LR for embeddings</li><li>Use WSD ([Hu et al., 2024](https://arxiv.org/abs/2404.06395v1); [Ḧagele et al., 2024](https://proceedings.neurips.cc/paper_files/paper/2024/file/8b970e15a89bf5d12542810df8eae8fc-Paper-Conference.pdf); [Luo et al., 2025](https://arxiv.org/abs/2511.18903)) learning rate scheduling</li><li>Set bias=False</li><li>[Logits soft-capping ([Gemma Team., 2024](https://arxiv.org/pdf/2408.00118))</li><li>Flash Attention 3 ([Shah et al., 2024](https://tridao.me/publications/flash3/flash3.pdf))</li><li>RMSNorm ([Zhang et al., 2019](https://arxiv.org/abs/1910.07467))</li></ul> | 2B | 183k | 3.1388 | 30.60 | 28.80 | 47.22 | 28.75 |
+| [v2 (2026-04-04_08-38-15)](./records/v2-2026-04-04_08-38-15/) | [Details](./records/v2-2026-04-04_08-38-15/) | 2B | 138k | 3.0862 | 31.10 | 29.60 | 47.73 | 28.50 |
+| [v1 (2026-03-31_07-00-01)](./records/v1-2026-03-31_07-00-01/) | [Details](./records/v1-2026-03-31_07-00-01/) | 2B | 183k | 3.1388 | 30.60 | 28.80 | 47.22 | 28.75 |
 
 ## Getting started
 

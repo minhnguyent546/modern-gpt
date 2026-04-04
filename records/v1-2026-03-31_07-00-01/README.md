@@ -20,14 +20,17 @@
 - Batch size: 256
 - Sequence length: 2048
 - Training time 3h 21m 29.67s
-- Number tokens seen: 2B
+- Number of tokens seen: 2B
 - Peak VRAM usage: 11865.56 MB
 
 ## Results
 
-- Throughput: 183k tokens/s
-- Validation loss: 3.1388
-- HellaSwag: 30.60
-- OpenBookQA: 28.80
-- ARC-easy: 47.22
-- ARC-challenge: 28.75
+
+| Metric | Result |
+| --- | ---: |
+| Throughput | 183k tokens/s |
+| Validation loss | 3.1388 |
+| HellaSwag | 30.60 |
+| OpenBookQA | 28.80 |
+| ARC-easy | 47.22 |
+| ARC-challenge | 28.75 |
