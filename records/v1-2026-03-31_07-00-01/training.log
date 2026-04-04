@@ -1,0 +1,1061 @@
+Git repository: https://github.com/minhnguyent546/modern-lm.git
+Git commit hash: 70cea080e3a3c17d8fcf494c6b34b253035aff07
+Git branch: feat/flops-and-mfu
+Python version: 3.12.13 (main, Mar 24 2026, 22:49:22) [Clang 22.1.1 ]
+Pytorch version 2.8.0+cu128 compiled for CUDA 12.8
+Tue Mar 31 07:00:01 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.126.09             Driver Version: 580.126.09     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA GeForce RTX 4090        Off |   00000000:5E:00.0 Off |                  Off |
+|  0%   54C    P2             13W /  450W |    3741MiB /  24564MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+|   1  NVIDIA GeForce RTX 4090        Off |   00000000:AF:00.0 Off |                  Off |
+|  0%   52C    P0             26W /  450W |     409MiB /  24564MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+
+Args: {'checkpoints_dir': './checkpoints', 'seed': 1061109567, 'train_dir': './data/Fineweb-Edu-10BT/train', 'val_dir': './data/Fineweb-Edu-10BT/val', 'vocab_size': 49152, 'seq_length': 2048, 'd_model': 768, 'num_layers': 12, 'num_heads': 12, 'd_ff': 2048, 'dropout': 0.0, 'tie_weights': True, 'rope_theta': 10000.0, 'attn_logit_softcapping': 0.0, 'final_logit_softcapping': 30.0, 'wandb_logging': True, 'wandb_project': 'modern-lm', 'wandb_name': 'v16-b8-g32-s2048-2B-wsd-muon-soft_capping-optimized-new_data-swiglu-rope-smollm', 'wandb_logging_interval': 15, 'wandb_resume_id': None, 'wandb_notes': None, 'wandb_tags': None, 'run_evals_only': False, 'compile': True, 'matmul_precision': 'high', 'gpu_peak_tflops': None, 'optim_type': 'muon', 'learning_rate': 0.0004, 'muon_lr': 0.01, 'adam_betas': [0.9, 0.999], 'adam_eps': 1e-10, 'weight_decay': 0.1, 'lr_schedule': 'wsd', 'warmup_steps': 500, 'min_lr': 4e-05, 'stable_steps': 2552, 'decay_steps': 762, 'decay_type': '1-sqrt', 'train_batch_size': 8, 'eval_batch_size': 8, 'gradient_accum_step': 32, 'mixed_precision': 'bf16', 'train_steps': 3814, 'val_steps': 640, 'val_interval': 100, 'log_interval': 5, 'save_interval': 1000, 'saved_checkpoint_limit': 6, 'max_grad_norm': 1.0, 'from_checkpoint': None, 'ddp_backend': 'nccl', 'rank': 0, 'local_rank': 0, 'world_size': 2, 'ddp_enabled': True, 'master_rank': 0, 'local_master_rank': 0, 'is_master': True, 'is_local_master': True}
+Using device: cuda
+Set float32 matmul precision to high
+Effective batch size: 256 (micro_batch_size=4, gradient_accum_step=32, num_devices=2)
+Tokens per forward/backward pass: 524288
+Total tokens in training dataset: 2004991326
+Total tokens in validation dataset: 101807253
+Wandb logging enabled. project: modern-lm, name: v16-b8-g32-s2048-2B-wsd-muon-soft_capping-optimized-new_data-swiglu-rope-smollm, id: ib1kz3e5
+Mixed precision training is enabled with bf16
+USE_FLASH_ATTN is set, trying to use flash attention if available
+Model: ModernLM(
+  (token_embedding): Embedding(49152, 768)
+  (decoder_blocks): Sequential(
+    (0): ModernLMDecoderBlock(
+      (causal_self_attention): CausalMultiHeadSelfAttention(
+        (attention_dropout): Dropout(p=0.0, inplace=False)
+        (residual_dropout): Dropout(p=0.0, inplace=False)
+        (w_q): Linear(in_features=768, out_features=768, bias=False)
+        (w_k): Linear(in_features=768, out_features=768, bias=False)
+        (w_v): Linear(in_features=768, out_features=768, bias=False)
+        (rl_projection): Linear(in_features=768, out_features=768, bias=False)
+        (rope): RotaryPositionalEmbeddings()
+      )
+      (mlp): SwiGLUFeedForward(
+        (w_gate): Linear(in_features=768, out_features=2048, bias=False)
+        (w_up): Linear(in_features=768, out_features=2048, bias=False)
+        (rl_projection): Linear(in_features=2048, out_features=768, bias=False)
+        (dropout): Dropout(p=0.0, inplace=False)
+      )
+    )
+    (1): ModernLMDecoderBlock(
+      (causal_self_attention): CausalMultiHeadSelfAttention(
+        (attention_dropout): Dropout(p=0.0, inplace=False)
+        (residual_dropout): Dropout(p=0.0, inplace=False)
+        (w_q): Linear(in_features=768, out_features=768, bias=False)
+        (w_k): Linear(in_features=768, out_features=768, bias=False)
+        (w_v): Linear(in_features=768, out_features=768, bias=False)
+        (rl_projection): Linear(in_features=768, out_features=768, bias=False)
+        (rope): RotaryPositionalEmbeddings()
+      )
+      (mlp): SwiGLUFeedForward(
+        (w_gate): Linear(in_features=768, out_features=2048, bias=False)
+        (w_up): Linear(in_features=768, out_features=2048, bias=False)
+        (rl_projection): Linear(in_features=2048, out_features=768, bias=False)
+        (dropout): Dropout(p=0.0, inplace=False)
+      )
+    )
+    (2): ModernLMDecoderBlock(
+      (causal_self_attention): CausalMultiHeadSelfAttention(
+        (attention_dropout): Dropout(p=0.0, inplace=False)
+        (residual_dropout): Dropout(p=0.0, inplace=False)
+        (w_q): Linear(in_features=768, out_features=768, bias=False)
+        (w_k): Linear(in_features=768, out_features=768, bias=False)
+        (w_v): Linear(in_features=768, out_features=768, bias=False)
+        (rl_projection): Linear(in_features=768, out_features=768, bias=False)
+        (rope): RotaryPositionalEmbeddings()
+      )
+      (mlp): SwiGLUFeedForward(
+        (w_gate): Linear(in_features=768, out_features=2048, bias=False)
+        (w_up): Linear(in_features=768, out_features=2048, bias=False)
+        (rl_projection): Linear(in_features=2048, out_features=768, bias=False)
+        (dropout): Dropout(p=0.0, inplace=False)
+      )
+    )
+    (3): ModernLMDecoderBlock(
+      (causal_self_attention): CausalMultiHeadSelfAttention(
+        (attention_dropout): Dropout(p=0.0, inplace=False)
+        (residual_dropout): Dropout(p=0.0, inplace=False)
+        (w_q): Linear(in_features=768, out_features=768, bias=False)
+        (w_k): Linear(in_features=768, out_features=768, bias=False)
+        (w_v): Linear(in_features=768, out_features=768, bias=False)
+        (rl_projection): Linear(in_features=768, out_features=768, bias=False)
+        (rope): RotaryPositionalEmbeddings()
+      )
+      (mlp): SwiGLUFeedForward(
+        (w_gate): Linear(in_features=768, out_features=2048, bias=False)
+        (w_up): Linear(in_features=768, out_features=2048, bias=False)
+        (rl_projection): Linear(in_features=2048, out_features=768, bias=False)
+        (dropout): Dropout(p=0.0, inplace=False)
+      )
+    )
+    (4): ModernLMDecoderBlock(
+      (causal_self_attention): CausalMultiHeadSelfAttention(
+        (attention_dropout): Dropout(p=0.0, inplace=False)
+        (residual_dropout): Dropout(p=0.0, inplace=False)
+        (w_q): Linear(in_features=768, out_features=768, bias=False)
+        (w_k): Linear(in_features=768, out_features=768, bias=False)
+        (w_v): Linear(in_features=768, out_features=768, bias=False)
+        (rl_projection): Linear(in_features=768, out_features=768, bias=False)
+        (rope): RotaryPositionalEmbeddings()
+      )
+      (mlp): SwiGLUFeedForward(
+        (w_gate): Linear(in_features=768, out_features=2048, bias=False)
+        (w_up): Linear(in_features=768, out_features=2048, bias=False)
+        (rl_projection): Linear(in_features=2048, out_features=768, bias=False)
+        (dropout): Dropout(p=0.0, inplace=False)
+      )
+    )
+    (5): ModernLMDecoderBlock(
+      (causal_self_attention): CausalMultiHeadSelfAttention(
+        (attention_dropout): Dropout(p=0.0, inplace=False)
+        (residual_dropout): Dropout(p=0.0, inplace=False)
+        (w_q): Linear(in_features=768, out_features=768, bias=False)
+        (w_k): Linear(in_features=768, out_features=768, bias=False)
+        (w_v): Linear(in_features=768, out_features=768, bias=False)
+        (rl_projection): Linear(in_features=768, out_features=768, bias=False)
+        (rope): RotaryPositionalEmbeddings()
+      )
+      (mlp): SwiGLUFeedForward(
+        (w_gate): Linear(in_features=768, out_features=2048, bias=False)
+        (w_up): Linear(in_features=768, out_features=2048, bias=False)
+        (rl_projection): Linear(in_features=2048, out_features=768, bias=False)
+        (dropout): Dropout(p=0.0, inplace=False)
+      )
+    )
+    (6): ModernLMDecoderBlock(
+      (causal_self_attention): CausalMultiHeadSelfAttention(
+        (attention_dropout): Dropout(p=0.0, inplace=False)
+        (residual_dropout): Dropout(p=0.0, inplace=False)
+        (w_q): Linear(in_features=768, out_features=768, bias=False)
+        (w_k): Linear(in_features=768, out_features=768, bias=False)
+        (w_v): Linear(in_features=768, out_features=768, bias=False)
+        (rl_projection): Linear(in_features=768, out_features=768, bias=False)
+        (rope): RotaryPositionalEmbeddings()
+      )
+      (mlp): SwiGLUFeedForward(
+        (w_gate): Linear(in_features=768, out_features=2048, bias=False)
+        (w_up): Linear(in_features=768, out_features=2048, bias=False)
+        (rl_projection): Linear(in_features=2048, out_features=768, bias=False)
+        (dropout): Dropout(p=0.0, inplace=False)
+      )
+    )
+    (7): ModernLMDecoderBlock(
+      (causal_self_attention): CausalMultiHeadSelfAttention(
+        (attention_dropout): Dropout(p=0.0, inplace=False)
+        (residual_dropout): Dropout(p=0.0, inplace=False)
+        (w_q): Linear(in_features=768, out_features=768, bias=False)
+        (w_k): Linear(in_features=768, out_features=768, bias=False)
+        (w_v): Linear(in_features=768, out_features=768, bias=False)
+        (rl_projection): Linear(in_features=768, out_features=768, bias=False)
+        (rope): RotaryPositionalEmbeddings()
+      )
+      (mlp): SwiGLUFeedForward(
+        (w_gate): Linear(in_features=768, out_features=2048, bias=False)
+        (w_up): Linear(in_features=768, out_features=2048, bias=False)
+        (rl_projection): Linear(in_features=2048, out_features=768, bias=False)
+        (dropout): Dropout(p=0.0, inplace=False)
+      )
+    )
+    (8): ModernLMDecoderBlock(
+      (causal_self_attention): CausalMultiHeadSelfAttention(
+        (attention_dropout): Dropout(p=0.0, inplace=False)
+        (residual_dropout): Dropout(p=0.0, inplace=False)
+        (w_q): Linear(in_features=768, out_features=768, bias=False)
+        (w_k): Linear(in_features=768, out_features=768, bias=False)
+        (w_v): Linear(in_features=768, out_features=768, bias=False)
+        (rl_projection): Linear(in_features=768, out_features=768, bias=False)
+        (rope): RotaryPositionalEmbeddings()
+      )
+      (mlp): SwiGLUFeedForward(
+        (w_gate): Linear(in_features=768, out_features=2048, bias=False)
+        (w_up): Linear(in_features=768, out_features=2048, bias=False)
+        (rl_projection): Linear(in_features=2048, out_features=768, bias=False)
+        (dropout): Dropout(p=0.0, inplace=False)
+      )
+    )
+    (9): ModernLMDecoderBlock(
+      (causal_self_attention): CausalMultiHeadSelfAttention(
+        (attention_dropout): Dropout(p=0.0, inplace=False)
+        (residual_dropout): Dropout(p=0.0, inplace=False)
+        (w_q): Linear(in_features=768, out_features=768, bias=False)
+        (w_k): Linear(in_features=768, out_features=768, bias=False)
+        (w_v): Linear(in_features=768, out_features=768, bias=False)
+        (rl_projection): Linear(in_features=768, out_features=768, bias=False)
+        (rope): RotaryPositionalEmbeddings()
+      )
+      (mlp): SwiGLUFeedForward(
+        (w_gate): Linear(in_features=768, out_features=2048, bias=False)
+        (w_up): Linear(in_features=768, out_features=2048, bias=False)
+        (rl_projection): Linear(in_features=2048, out_features=768, bias=False)
+        (dropout): Dropout(p=0.0, inplace=False)
+      )
+    )
+    (10): ModernLMDecoderBlock(
+      (causal_self_attention): CausalMultiHeadSelfAttention(
+        (attention_dropout): Dropout(p=0.0, inplace=False)
+        (residual_dropout): Dropout(p=0.0, inplace=False)
+        (w_q): Linear(in_features=768, out_features=768, bias=False)
+        (w_k): Linear(in_features=768, out_features=768, bias=False)
+        (w_v): Linear(in_features=768, out_features=768, bias=False)
+        (rl_projection): Linear(in_features=768, out_features=768, bias=False)
+        (rope): RotaryPositionalEmbeddings()
+      )
+      (mlp): SwiGLUFeedForward(
+        (w_gate): Linear(in_features=768, out_features=2048, bias=False)
+        (w_up): Linear(in_features=768, out_features=2048, bias=False)
+        (rl_projection): Linear(in_features=2048, out_features=768, bias=False)
+        (dropout): Dropout(p=0.0, inplace=False)
+      )
+    )
+    (11): ModernLMDecoderBlock(
+      (causal_self_attention): CausalMultiHeadSelfAttention(
+        (attention_dropout): Dropout(p=0.0, inplace=False)
+        (residual_dropout): Dropout(p=0.0, inplace=False)
+        (w_q): Linear(in_features=768, out_features=768, bias=False)
+        (w_k): Linear(in_features=768, out_features=768, bias=False)
+        (w_v): Linear(in_features=768, out_features=768, bias=False)
+        (rl_projection): Linear(in_features=768, out_features=768, bias=False)
+        (rope): RotaryPositionalEmbeddings()
+      )
+      (mlp): SwiGLUFeedForward(
+        (w_gate): Linear(in_features=768, out_features=2048, bias=False)
+        (w_up): Linear(in_features=768, out_features=2048, bias=False)
+        (rl_projection): Linear(in_features=2048, out_features=768, bias=False)
+        (dropout): Dropout(p=0.0, inplace=False)
+      )
+    )
+  )
+  (lm_head): Linear(in_features=768, out_features=49152, bias=False)
+)
+Compiling the model
+Model has 122.68M parameters
+Estimated FLOPs per token (fwd+bwd): 9.63e+08
+GPU peak FLOPS (bf16): 1.65e+14
+[step 5 / 3814] loss: 10.8817 | throughput: 190188.8 tokens/s | grad_norm: 9.5305 | mfu: 55.4% | token_seen: 2.62e+06
+[step 10 / 3814] loss: 10.7088 | throughput: 189933.6 tokens/s | grad_norm: 9.7896 | mfu: 55.3% | token_seen: 5.24e+06
+[step 15 / 3814] loss: 10.3813 | throughput: 189736.2 tokens/s | grad_norm: 10.3212 | mfu: 55.3% | token_seen: 7.86e+06
+[step 20 / 3814] loss: 9.8186 | throughput: 189482.9 tokens/s | grad_norm: 10.4197 | mfu: 55.2% | token_seen: 1.05e+07
+[step 25 / 3814] loss: 9.1715 | throughput: 189489.0 tokens/s | grad_norm: 8.6681 | mfu: 55.2% | token_seen: 1.31e+07
+[step 30 / 3814] loss: 8.3728 | throughput: 188974.5 tokens/s | grad_norm: 6.4344 | mfu: 55.1% | token_seen: 1.57e+07
+[step 35 / 3814] loss: 7.6947 | throughput: 188898.6 tokens/s | grad_norm: 3.7684 | mfu: 55.0% | token_seen: 1.84e+07
+[step 40 / 3814] loss: 7.4196 | throughput: 188466.4 tokens/s | grad_norm: 3.4157 | mfu: 54.9% | token_seen: 2.10e+07
+[step 45 / 3814] loss: 7.3104 | throughput: 188542.6 tokens/s | grad_norm: 6.1228 | mfu: 54.9% | token_seen: 2.36e+07
+[step 50 / 3814] loss: 7.1998 | throughput: 187589.3 tokens/s | grad_norm: 8.2239 | mfu: 54.7% | token_seen: 2.62e+07
+[step 55 / 3814] loss: 6.9525 | throughput: 187034.1 tokens/s | grad_norm: 2.4793 | mfu: 54.5% | token_seen: 2.88e+07
+[step 60 / 3814] loss: 6.7003 | throughput: 187398.6 tokens/s | grad_norm: 2.8531 | mfu: 54.6% | token_seen: 3.15e+07
+[step 65 / 3814] loss: 6.5719 | throughput: 186710.3 tokens/s | grad_norm: 4.6097 | mfu: 54.4% | token_seen: 3.41e+07
+[step 70 / 3814] loss: 6.3481 | throughput: 187735.1 tokens/s | grad_norm: 3.0745 | mfu: 54.7% | token_seen: 3.67e+07
+[step 75 / 3814] loss: 6.3236 | throughput: 186928.3 tokens/s | grad_norm: 4.1700 | mfu: 54.5% | token_seen: 3.93e+07
+[step 80 / 3814] loss: 6.2663 | throughput: 187476.8 tokens/s | grad_norm: 2.6777 | mfu: 54.6% | token_seen: 4.19e+07
+[step 85 / 3814] loss: 6.0643 | throughput: 187711.4 tokens/s | grad_norm: 2.3966 | mfu: 54.7% | token_seen: 4.46e+07
+[step 90 / 3814] loss: 5.9677 | throughput: 187180.8 tokens/s | grad_norm: 2.3173 | mfu: 54.5% | token_seen: 4.72e+07
+[step 95 / 3814] loss: 5.9649 | throughput: 188033.1 tokens/s | grad_norm: 2.5844 | mfu: 54.8% | token_seen: 4.98e+07
+[step 100 / 3814] running_loss: 7.7046 | val_loss: 5.9333 | num_eval_tokens: 10485760 | hellaswag: 0.2518 | obqa: 0.2640 | arc_easy: 0.2967 | arc_challenge: 0.2312
+[step 100 / 3814] loss: 5.9082 | throughput: 187781.3 tokens/s | grad_norm: 2.7935 | mfu: 54.7% | token_seen: 5.24e+07
+[step 105 / 3814] loss: 5.8523 | throughput: 190320.2 tokens/s | grad_norm: 2.0293 | mfu: 55.4% | token_seen: 5.51e+07
+[step 110 / 3814] loss: 5.7885 | throughput: 189819.1 tokens/s | grad_norm: 2.5779 | mfu: 55.3% | token_seen: 5.77e+07
+[step 115 / 3814] loss: 5.8151 | throughput: 189262.2 tokens/s | grad_norm: 2.4302 | mfu: 55.1% | token_seen: 6.03e+07
+[step 120 / 3814] loss: 5.7182 | throughput: 188769.8 tokens/s | grad_norm: 3.8248 | mfu: 55.0% | token_seen: 6.29e+07
+[step 125 / 3814] loss: 5.6566 | throughput: 187871.4 tokens/s | grad_norm: 2.9968 | mfu: 54.7% | token_seen: 6.55e+07
+[step 130 / 3814] loss: 5.5532 | throughput: 187987.2 tokens/s | grad_norm: 4.0738 | mfu: 54.8% | token_seen: 6.82e+07
+[step 135 / 3814] loss: 5.5579 | throughput: 187055.4 tokens/s | grad_norm: 3.3355 | mfu: 54.5% | token_seen: 7.08e+07
+[step 140 / 3814] loss: 5.4340 | throughput: 186626.8 tokens/s | grad_norm: 4.2572 | mfu: 54.4% | token_seen: 7.34e+07
+[step 145 / 3814] loss: 5.5311 | throughput: 187682.9 tokens/s | grad_norm: 3.1364 | mfu: 54.7% | token_seen: 7.60e+07
+[step 150 / 3814] loss: 5.4427 | throughput: 186355.2 tokens/s | grad_norm: 5.4743 | mfu: 54.3% | token_seen: 7.86e+07
+[step 155 / 3814] loss: 5.3976 | throughput: 186793.8 tokens/s | grad_norm: 3.8124 | mfu: 54.4% | token_seen: 8.13e+07
+[step 160 / 3814] loss: 5.3284 | throughput: 187326.8 tokens/s | grad_norm: 4.2068 | mfu: 54.6% | token_seen: 8.39e+07
+[step 165 / 3814] loss: 5.2716 | throughput: 187517.5 tokens/s | grad_norm: 4.2475 | mfu: 54.6% | token_seen: 8.65e+07
+[step 170 / 3814] loss: 5.3240 | throughput: 187249.9 tokens/s | grad_norm: 3.8840 | mfu: 54.6% | token_seen: 8.91e+07
+[step 175 / 3814] loss: 5.1603 | throughput: 187040.2 tokens/s | grad_norm: 4.2473 | mfu: 54.5% | token_seen: 9.18e+07
+[step 180 / 3814] loss: 5.1529 | throughput: 186185.1 tokens/s | grad_norm: 3.3357 | mfu: 54.2% | token_seen: 9.44e+07
+[step 185 / 3814] loss: 5.1123 | throughput: 186193.4 tokens/s | grad_norm: 3.9456 | mfu: 54.2% | token_seen: 9.70e+07
+[step 190 / 3814] loss: 5.0954 | throughput: 185662.9 tokens/s | grad_norm: 3.3178 | mfu: 54.1% | token_seen: 9.96e+07
+[step 195 / 3814] loss: 5.0653 | throughput: 187473.0 tokens/s | grad_norm: 4.6076 | mfu: 54.6% | token_seen: 1.02e+08
+[step 200 / 3814] running_loss: 5.4255 | val_loss: 5.0298 | num_eval_tokens: 10485760 | hellaswag: 0.2455 | obqa: 0.3040 | arc_easy: 0.3081 | arc_challenge: 0.1971
+[step 200 / 3814] loss: 4.9536 | throughput: 186929.7 tokens/s | grad_norm: 3.7089 | mfu: 54.5% | token_seen: 1.05e+08
+[step 205 / 3814] loss: 4.9718 | throughput: 187265.2 tokens/s | grad_norm: 3.6712 | mfu: 54.6% | token_seen: 1.07e+08
+[step 210 / 3814] loss: 4.8157 | throughput: 186885.7 tokens/s | grad_norm: 2.9544 | mfu: 54.4% | token_seen: 1.10e+08
+[step 215 / 3814] loss: 4.8384 | throughput: 186308.4 tokens/s | grad_norm: 3.3256 | mfu: 54.3% | token_seen: 1.13e+08
+[step 220 / 3814] loss: 4.8277 | throughput: 186688.1 tokens/s | grad_norm: 2.6923 | mfu: 54.4% | token_seen: 1.15e+08
+[step 225 / 3814] loss: 4.6627 | throughput: 186975.2 tokens/s | grad_norm: 3.3581 | mfu: 54.5% | token_seen: 1.18e+08
+[step 230 / 3814] loss: 4.6884 | throughput: 187421.1 tokens/s | grad_norm: 2.1339 | mfu: 54.6% | token_seen: 1.21e+08
+[step 235 / 3814] loss: 4.6235 | throughput: 187075.0 tokens/s | grad_norm: 2.9616 | mfu: 54.5% | token_seen: 1.23e+08
+[step 240 / 3814] loss: 4.6627 | throughput: 187525.1 tokens/s | grad_norm: 2.4361 | mfu: 54.6% | token_seen: 1.26e+08
+[step 245 / 3814] loss: 4.5772 | throughput: 187411.8 tokens/s | grad_norm: 2.6497 | mfu: 54.6% | token_seen: 1.28e+08
+[step 250 / 3814] loss: 4.6384 | throughput: 186974.1 tokens/s | grad_norm: 2.3139 | mfu: 54.5% | token_seen: 1.31e+08
+[step 255 / 3814] loss: 4.5232 | throughput: 185661.0 tokens/s | grad_norm: 2.5063 | mfu: 54.1% | token_seen: 1.34e+08
+[step 260 / 3814] loss: 4.5151 | throughput: 186398.2 tokens/s | grad_norm: 2.2975 | mfu: 54.3% | token_seen: 1.36e+08
+[step 265 / 3814] loss: 4.4755 | throughput: 186249.0 tokens/s | grad_norm: 1.8722 | mfu: 54.3% | token_seen: 1.39e+08
+[step 270 / 3814] loss: 4.5159 | throughput: 187238.2 tokens/s | grad_norm: 2.1991 | mfu: 54.6% | token_seen: 1.42e+08
+[step 275 / 3814] loss: 4.5766 | throughput: 187462.7 tokens/s | grad_norm: 2.2033 | mfu: 54.6% | token_seen: 1.44e+08
+[step 280 / 3814] loss: 4.4250 | throughput: 187084.8 tokens/s | grad_norm: 1.5566 | mfu: 54.5% | token_seen: 1.47e+08
+[step 285 / 3814] loss: 4.3774 | throughput: 187644.5 tokens/s | grad_norm: 1.7227 | mfu: 54.7% | token_seen: 1.49e+08
+[step 290 / 3814] loss: 4.4074 | throughput: 186252.4 tokens/s | grad_norm: 1.6801 | mfu: 54.3% | token_seen: 1.52e+08
+[step 295 / 3814] loss: 4.3620 | throughput: 186796.4 tokens/s | grad_norm: 1.7297 | mfu: 54.4% | token_seen: 1.55e+08
+[step 300 / 3814] running_loss: 4.6176 | val_loss: 4.4380 | num_eval_tokens: 10485760 | hellaswag: 0.2501 | obqa: 0.2940 | arc_easy: 0.3367 | arc_challenge: 0.2278
+[step 300 / 3814] loss: 4.3943 | throughput: 187057.5 tokens/s | grad_norm: 1.8005 | mfu: 54.5% | token_seen: 1.57e+08
+[step 305 / 3814] loss: 4.3846 | throughput: 186154.2 tokens/s | grad_norm: 1.3281 | mfu: 54.2% | token_seen: 1.60e+08
+[step 310 / 3814] loss: 4.3209 | throughput: 187036.3 tokens/s | grad_norm: 1.2887 | mfu: 54.5% | token_seen: 1.63e+08
+[step 315 / 3814] loss: 4.2724 | throughput: 187102.0 tokens/s | grad_norm: 1.4705 | mfu: 54.5% | token_seen: 1.65e+08
+[step 320 / 3814] loss: 4.2224 | throughput: 187746.6 tokens/s | grad_norm: 1.2747 | mfu: 54.7% | token_seen: 1.68e+08
+[step 325 / 3814] loss: 4.1859 | throughput: 187653.6 tokens/s | grad_norm: 1.4011 | mfu: 54.7% | token_seen: 1.70e+08
+[step 330 / 3814] loss: 4.2375 | throughput: 186551.3 tokens/s | grad_norm: 1.4851 | mfu: 54.4% | token_seen: 1.73e+08
+[step 335 / 3814] loss: 4.1432 | throughput: 187770.8 tokens/s | grad_norm: 1.1976 | mfu: 54.7% | token_seen: 1.76e+08
+[step 340 / 3814] loss: 4.1947 | throughput: 187582.7 tokens/s | grad_norm: 1.5086 | mfu: 54.7% | token_seen: 1.78e+08
+[step 345 / 3814] loss: 4.0613 | throughput: 187138.7 tokens/s | grad_norm: 1.3653 | mfu: 54.5% | token_seen: 1.81e+08
+[step 350 / 3814] loss: 4.1534 | throughput: 186757.9 tokens/s | grad_norm: 1.3894 | mfu: 54.4% | token_seen: 1.84e+08
+[step 355 / 3814] loss: 4.0640 | throughput: 186629.0 tokens/s | grad_norm: 1.5160 | mfu: 54.4% | token_seen: 1.86e+08
+[step 360 / 3814] loss: 4.0689 | throughput: 186704.9 tokens/s | grad_norm: 1.1357 | mfu: 54.4% | token_seen: 1.89e+08
+[step 365 / 3814] loss: 4.0561 | throughput: 187222.5 tokens/s | grad_norm: 1.3088 | mfu: 54.5% | token_seen: 1.91e+08
+[step 370 / 3814] loss: 3.9840 | throughput: 187703.9 tokens/s | grad_norm: 1.0424 | mfu: 54.7% | token_seen: 1.94e+08
+[step 375 / 3814] loss: 3.9876 | throughput: 187211.6 tokens/s | grad_norm: 1.2529 | mfu: 54.5% | token_seen: 1.97e+08
+[step 380 / 3814] loss: 3.9571 | throughput: 187342.4 tokens/s | grad_norm: 1.2097 | mfu: 54.6% | token_seen: 1.99e+08
+[step 385 / 3814] loss: 3.9484 | throughput: 186370.2 tokens/s | grad_norm: 1.2621 | mfu: 54.3% | token_seen: 2.02e+08
+[step 390 / 3814] loss: 3.9775 | throughput: 186817.1 tokens/s | grad_norm: 1.0738 | mfu: 54.4% | token_seen: 2.04e+08
+[step 395 / 3814] loss: 3.9213 | throughput: 186547.1 tokens/s | grad_norm: 1.1856 | mfu: 54.3% | token_seen: 2.07e+08
+[step 400 / 3814] running_loss: 4.1199 | val_loss: 4.0338 | num_eval_tokens: 10485760 | hellaswag: 0.2622 | obqa: 0.2760 | arc_easy: 0.3577 | arc_challenge: 0.2329
+[step 400 / 3814] loss: 3.9323 | throughput: 186505.3 tokens/s | grad_norm: 1.1344 | mfu: 54.3% | token_seen: 2.10e+08
+[step 405 / 3814] loss: 3.8634 | throughput: 187267.7 tokens/s | grad_norm: 0.9115 | mfu: 54.6% | token_seen: 2.12e+08
+[step 410 / 3814] loss: 3.8508 | throughput: 186967.7 tokens/s | grad_norm: 0.9362 | mfu: 54.5% | token_seen: 2.15e+08
+[step 415 / 3814] loss: 3.9092 | throughput: 185605.7 tokens/s | grad_norm: 1.0526 | mfu: 54.1% | token_seen: 2.18e+08
+[step 420 / 3814] loss: 3.8132 | throughput: 186936.2 tokens/s | grad_norm: 0.9489 | mfu: 54.5% | token_seen: 2.20e+08
+[step 425 / 3814] loss: 3.7796 | throughput: 186809.3 tokens/s | grad_norm: 0.8891 | mfu: 54.4% | token_seen: 2.23e+08
+[step 430 / 3814] loss: 3.9342 | throughput: 187597.3 tokens/s | grad_norm: 1.0908 | mfu: 54.7% | token_seen: 2.25e+08
+[step 435 / 3814] loss: 3.9223 | throughput: 185646.0 tokens/s | grad_norm: 1.0134 | mfu: 54.1% | token_seen: 2.28e+08
+[step 440 / 3814] loss: 3.8264 | throughput: 186932.4 tokens/s | grad_norm: 0.7922 | mfu: 54.5% | token_seen: 2.31e+08
+[step 445 / 3814] loss: 3.8711 | throughput: 186124.6 tokens/s | grad_norm: 0.7725 | mfu: 54.2% | token_seen: 2.33e+08
+[step 450 / 3814] loss: 3.8036 | throughput: 187122.6 tokens/s | grad_norm: 0.8767 | mfu: 54.5% | token_seen: 2.36e+08
+[step 455 / 3814] loss: 3.8470 | throughput: 186488.1 tokens/s | grad_norm: 0.8752 | mfu: 54.3% | token_seen: 2.39e+08
+[step 460 / 3814] loss: 3.8958 | throughput: 186583.4 tokens/s | grad_norm: 0.8423 | mfu: 54.4% | token_seen: 2.41e+08
+[step 465 / 3814] loss: 3.8018 | throughput: 187228.8 tokens/s | grad_norm: 0.8629 | mfu: 54.5% | token_seen: 2.44e+08
+[step 470 / 3814] loss: 3.8007 | throughput: 185170.6 tokens/s | grad_norm: 0.7807 | mfu: 53.9% | token_seen: 2.46e+08
+[step 475 / 3814] loss: 3.6870 | throughput: 187209.3 tokens/s | grad_norm: 0.8074 | mfu: 54.5% | token_seen: 2.49e+08
+[step 480 / 3814] loss: 3.7378 | throughput: 186688.2 tokens/s | grad_norm: 0.7443 | mfu: 54.4% | token_seen: 2.52e+08
+[step 485 / 3814] loss: 3.7648 | throughput: 186517.7 tokens/s | grad_norm: 0.7280 | mfu: 54.3% | token_seen: 2.54e+08
+[step 490 / 3814] loss: 3.7373 | throughput: 186404.0 tokens/s | grad_norm: 0.6547 | mfu: 54.3% | token_seen: 2.57e+08
+[step 495 / 3814] loss: 3.6570 | throughput: 187109.4 tokens/s | grad_norm: 0.7019 | mfu: 54.5% | token_seen: 2.60e+08
+[step 500 / 3814] running_loss: 3.8281 | val_loss: 3.8539 | num_eval_tokens: 10485760 | hellaswag: 0.2743 | obqa: 0.2940 | arc_easy: 0.3615 | arc_challenge: 0.2304
+[step 500 / 3814] loss: 3.7510 | throughput: 186016.8 tokens/s | grad_norm: 0.7648 | mfu: 54.2% | token_seen: 2.62e+08
+[step 505 / 3814] loss: 3.6670 | throughput: 186868.1 tokens/s | grad_norm: 0.6857 | mfu: 54.4% | token_seen: 2.65e+08
+[step 510 / 3814] loss: 3.6752 | throughput: 187539.0 tokens/s | grad_norm: 0.7142 | mfu: 54.6% | token_seen: 2.67e+08
+[step 515 / 3814] loss: 3.7262 | throughput: 185863.8 tokens/s | grad_norm: 0.7817 | mfu: 54.1% | token_seen: 2.70e+08
+[step 520 / 3814] loss: 3.6126 | throughput: 187066.5 tokens/s | grad_norm: 0.6747 | mfu: 54.5% | token_seen: 2.73e+08
+[step 525 / 3814] loss: 3.6990 | throughput: 185654.2 tokens/s | grad_norm: 0.6018 | mfu: 54.1% | token_seen: 2.75e+08
+[step 530 / 3814] loss: 3.7982 | throughput: 187433.6 tokens/s | grad_norm: 0.7215 | mfu: 54.6% | token_seen: 2.78e+08
+[step 535 / 3814] loss: 3.6241 | throughput: 187089.5 tokens/s | grad_norm: 0.6747 | mfu: 54.5% | token_seen: 2.80e+08
+[step 540 / 3814] loss: 3.7270 | throughput: 187013.0 tokens/s | grad_norm: 0.7647 | mfu: 54.5% | token_seen: 2.83e+08
+[step 545 / 3814] loss: 3.6949 | throughput: 187358.5 tokens/s | grad_norm: 0.6102 | mfu: 54.6% | token_seen: 2.86e+08
+[step 550 / 3814] loss: 3.6710 | throughput: 186080.8 tokens/s | grad_norm: 0.6099 | mfu: 54.2% | token_seen: 2.88e+08
+[step 555 / 3814] loss: 3.5310 | throughput: 186475.4 tokens/s | grad_norm: 0.7211 | mfu: 54.3% | token_seen: 2.91e+08
+[step 560 / 3814] loss: 3.5930 | throughput: 186163.0 tokens/s | grad_norm: 0.7012 | mfu: 54.2% | token_seen: 2.94e+08
+[step 565 / 3814] loss: 3.6586 | throughput: 185387.4 tokens/s | grad_norm: 0.5593 | mfu: 54.0% | token_seen: 2.96e+08
+[step 570 / 3814] loss: 3.6403 | throughput: 185310.3 tokens/s | grad_norm: 0.6741 | mfu: 54.0% | token_seen: 2.99e+08
+[step 575 / 3814] loss: 3.6877 | throughput: 185504.1 tokens/s | grad_norm: 0.5951 | mfu: 54.0% | token_seen: 3.01e+08
+[step 580 / 3814] loss: 3.6653 | throughput: 187505.9 tokens/s | grad_norm: 0.6393 | mfu: 54.6% | token_seen: 3.04e+08
+[step 585 / 3814] loss: 3.6585 | throughput: 186028.4 tokens/s | grad_norm: 0.5043 | mfu: 54.2% | token_seen: 3.07e+08
+[step 590 / 3814] loss: 3.5245 | throughput: 186399.8 tokens/s | grad_norm: 0.6049 | mfu: 54.3% | token_seen: 3.09e+08
+[step 595 / 3814] loss: 3.6507 | throughput: 186163.9 tokens/s | grad_norm: 0.5106 | mfu: 54.2% | token_seen: 3.12e+08
+[step 600 / 3814] running_loss: 3.6530 | val_loss: 3.7079 | num_eval_tokens: 10485760 | hellaswag: 0.2721 | obqa: 0.2600 | arc_easy: 0.3489 | arc_challenge: 0.2329
+[step 600 / 3814] loss: 3.4959 | throughput: 186514.5 tokens/s | grad_norm: 0.5679 | mfu: 54.3% | token_seen: 3.15e+08
+[step 605 / 3814] loss: 3.5814 | throughput: 186908.5 tokens/s | grad_norm: 0.6058 | mfu: 54.5% | token_seen: 3.17e+08
+[step 610 / 3814] loss: 3.5693 | throughput: 186671.4 tokens/s | grad_norm: 0.5276 | mfu: 54.4% | token_seen: 3.20e+08
+[step 615 / 3814] loss: 3.5915 | throughput: 185704.2 tokens/s | grad_norm: 0.5919 | mfu: 54.1% | token_seen: 3.22e+08
+[step 620 / 3814] loss: 3.5837 | throughput: 186712.2 tokens/s | grad_norm: 0.5402 | mfu: 54.4% | token_seen: 3.25e+08
+[step 625 / 3814] loss: 3.4856 | throughput: 186948.6 tokens/s | grad_norm: 0.5705 | mfu: 54.5% | token_seen: 3.28e+08
+[step 630 / 3814] loss: 3.4884 | throughput: 186831.4 tokens/s | grad_norm: 0.5303 | mfu: 54.4% | token_seen: 3.30e+08
+[step 635 / 3814] loss: 3.4865 | throughput: 187229.3 tokens/s | grad_norm: 0.5011 | mfu: 54.5% | token_seen: 3.33e+08
+[step 640 / 3814] loss: 3.4984 | throughput: 186271.4 tokens/s | grad_norm: 0.5868 | mfu: 54.3% | token_seen: 3.36e+08
+[step 645 / 3814] loss: 3.5777 | throughput: 186648.3 tokens/s | grad_norm: 0.4613 | mfu: 54.4% | token_seen: 3.38e+08
+[step 650 / 3814] loss: 3.4987 | throughput: 185217.6 tokens/s | grad_norm: 0.5543 | mfu: 54.0% | token_seen: 3.41e+08
+[step 655 / 3814] loss: 3.4971 | throughput: 186582.0 tokens/s | grad_norm: 0.4954 | mfu: 54.4% | token_seen: 3.43e+08
+[step 660 / 3814] loss: 3.4929 | throughput: 186612.0 tokens/s | grad_norm: 0.4743 | mfu: 54.4% | token_seen: 3.46e+08
+[step 665 / 3814] loss: 3.4695 | throughput: 186233.8 tokens/s | grad_norm: 0.5673 | mfu: 54.3% | token_seen: 3.49e+08
+[step 670 / 3814] loss: 3.5718 | throughput: 185729.4 tokens/s | grad_norm: 0.5138 | mfu: 54.1% | token_seen: 3.51e+08
+[step 675 / 3814] loss: 3.3796 | throughput: 187077.2 tokens/s | grad_norm: 0.4866 | mfu: 54.5% | token_seen: 3.54e+08
+[step 680 / 3814] loss: 3.4881 | throughput: 185430.5 tokens/s | grad_norm: 0.5233 | mfu: 54.0% | token_seen: 3.57e+08
+[step 685 / 3814] loss: 3.4443 | throughput: 186406.2 tokens/s | grad_norm: 0.5145 | mfu: 54.3% | token_seen: 3.59e+08
+[step 690 / 3814] loss: 3.5299 | throughput: 185682.0 tokens/s | grad_norm: 0.5998 | mfu: 54.1% | token_seen: 3.62e+08
+[step 695 / 3814] loss: 3.4459 | throughput: 186758.4 tokens/s | grad_norm: 0.4803 | mfu: 54.4% | token_seen: 3.64e+08
+[step 700 / 3814] running_loss: 3.5258 | val_loss: 3.6124 | num_eval_tokens: 10485760 | hellaswag: 0.2734 | obqa: 0.3160 | arc_easy: 0.3704 | arc_challenge: 0.2338
+[step 700 / 3814] loss: 3.5472 | throughput: 185550.8 tokens/s | grad_norm: 0.5023 | mfu: 54.1% | token_seen: 3.67e+08
+[step 705 / 3814] loss: 3.5022 | throughput: 186527.2 tokens/s | grad_norm: 0.4976 | mfu: 54.3% | token_seen: 3.70e+08
+[step 710 / 3814] loss: 3.4701 | throughput: 187168.4 tokens/s | grad_norm: 0.5085 | mfu: 54.5% | token_seen: 3.72e+08
+[step 715 / 3814] loss: 3.4877 | throughput: 186767.2 tokens/s | grad_norm: 0.5255 | mfu: 54.4% | token_seen: 3.75e+08
+[step 720 / 3814] loss: 3.5456 | throughput: 187335.8 tokens/s | grad_norm: 0.4455 | mfu: 54.6% | token_seen: 3.77e+08
+[step 725 / 3814] loss: 3.5105 | throughput: 185833.5 tokens/s | grad_norm: 0.5009 | mfu: 54.1% | token_seen: 3.80e+08
+[step 730 / 3814] loss: 3.4934 | throughput: 186612.6 tokens/s | grad_norm: 0.4661 | mfu: 54.4% | token_seen: 3.83e+08
+[step 735 / 3814] loss: 3.4616 | throughput: 186317.0 tokens/s | grad_norm: 0.4745 | mfu: 54.3% | token_seen: 3.85e+08
+[step 740 / 3814] loss: 3.4589 | throughput: 187212.8 tokens/s | grad_norm: 0.4161 | mfu: 54.5% | token_seen: 3.88e+08
+[step 745 / 3814] loss: 3.4736 | throughput: 185614.2 tokens/s | grad_norm: 0.4642 | mfu: 54.1% | token_seen: 3.91e+08
+[step 750 / 3814] loss: 3.4226 | throughput: 186749.7 tokens/s | grad_norm: 0.4029 | mfu: 54.4% | token_seen: 3.93e+08
+[step 755 / 3814] loss: 3.3582 | throughput: 186152.3 tokens/s | grad_norm: 0.4660 | mfu: 54.2% | token_seen: 3.96e+08
+[step 760 / 3814] loss: 3.4393 | throughput: 186431.6 tokens/s | grad_norm: 0.5220 | mfu: 54.3% | token_seen: 3.98e+08
+[step 765 / 3814] loss: 3.4276 | throughput: 187022.5 tokens/s | grad_norm: 0.5356 | mfu: 54.5% | token_seen: 4.01e+08
+[step 770 / 3814] loss: 3.4480 | throughput: 185429.2 tokens/s | grad_norm: 0.5170 | mfu: 54.0% | token_seen: 4.04e+08
+[step 775 / 3814] loss: 3.5015 | throughput: 187099.0 tokens/s | grad_norm: 0.5032 | mfu: 54.5% | token_seen: 4.06e+08
+[step 780 / 3814] loss: 3.3928 | throughput: 185492.3 tokens/s | grad_norm: 0.4865 | mfu: 54.0% | token_seen: 4.09e+08
+[step 785 / 3814] loss: 3.4149 | throughput: 185964.5 tokens/s | grad_norm: 0.4701 | mfu: 54.2% | token_seen: 4.12e+08
+[step 790 / 3814] loss: 3.4575 | throughput: 185709.9 tokens/s | grad_norm: 0.5302 | mfu: 54.1% | token_seen: 4.14e+08
+[step 795 / 3814] loss: 3.3788 | throughput: 185788.7 tokens/s | grad_norm: 0.4532 | mfu: 54.1% | token_seen: 4.17e+08
+[step 800 / 3814] running_loss: 3.4614 | val_loss: 3.5460 | num_eval_tokens: 10485760 | hellaswag: 0.2799 | obqa: 0.2980 | arc_easy: 0.3691 | arc_challenge: 0.2355
+[step 800 / 3814] loss: 3.3875 | throughput: 186938.5 tokens/s | grad_norm: 0.4253 | mfu: 54.5% | token_seen: 4.19e+08
+[step 805 / 3814] loss: 3.4120 | throughput: 187185.6 tokens/s | grad_norm: 0.5171 | mfu: 54.5% | token_seen: 4.22e+08
+[step 810 / 3814] loss: 3.4430 | throughput: 187144.3 tokens/s | grad_norm: 0.4198 | mfu: 54.5% | token_seen: 4.25e+08
+[step 815 / 3814] loss: 3.4090 | throughput: 186684.5 tokens/s | grad_norm: 0.4500 | mfu: 54.4% | token_seen: 4.27e+08
+[step 820 / 3814] loss: 3.4425 | throughput: 187110.0 tokens/s | grad_norm: 0.4104 | mfu: 54.5% | token_seen: 4.30e+08
+[step 825 / 3814] loss: 3.4044 | throughput: 185882.1 tokens/s | grad_norm: 0.4373 | mfu: 54.2% | token_seen: 4.33e+08
+[step 830 / 3814] loss: 3.4476 | throughput: 187457.1 tokens/s | grad_norm: 0.4643 | mfu: 54.6% | token_seen: 4.35e+08
+[step 835 / 3814] loss: 3.4225 | throughput: 186509.2 tokens/s | grad_norm: 0.4390 | mfu: 54.3% | token_seen: 4.38e+08
+[step 840 / 3814] loss: 3.4450 | throughput: 186545.2 tokens/s | grad_norm: 0.4043 | mfu: 54.3% | token_seen: 4.40e+08
+[step 845 / 3814] loss: 3.4448 | throughput: 187626.0 tokens/s | grad_norm: 0.4202 | mfu: 54.7% | token_seen: 4.43e+08
+[step 850 / 3814] loss: 3.4411 | throughput: 185805.5 tokens/s | grad_norm: 0.4609 | mfu: 54.1% | token_seen: 4.46e+08
+[step 855 / 3814] loss: 3.3730 | throughput: 186913.0 tokens/s | grad_norm: 0.4193 | mfu: 54.5% | token_seen: 4.48e+08
+[step 860 / 3814] loss: 3.3226 | throughput: 186885.7 tokens/s | grad_norm: 0.4803 | mfu: 54.4% | token_seen: 4.51e+08
+[step 865 / 3814] loss: 3.4498 | throughput: 187172.8 tokens/s | grad_norm: 0.6573 | mfu: 54.5% | token_seen: 4.54e+08
+[step 870 / 3814] loss: 3.3676 | throughput: 187327.9 tokens/s | grad_norm: 0.4131 | mfu: 54.6% | token_seen: 4.56e+08
+[step 875 / 3814] loss: 3.3218 | throughput: 187652.8 tokens/s | grad_norm: 0.4119 | mfu: 54.7% | token_seen: 4.59e+08
+[step 880 / 3814] loss: 3.4114 | throughput: 187175.1 tokens/s | grad_norm: 0.4406 | mfu: 54.5% | token_seen: 4.61e+08
+[step 885 / 3814] loss: 3.2726 | throughput: 187091.0 tokens/s | grad_norm: 0.4274 | mfu: 54.5% | token_seen: 4.64e+08
+[step 890 / 3814] loss: 3.3971 | throughput: 186896.6 tokens/s | grad_norm: 0.4243 | mfu: 54.5% | token_seen: 4.67e+08
+[step 895 / 3814] loss: 3.4062 | throughput: 187304.5 tokens/s | grad_norm: 0.4217 | mfu: 54.6% | token_seen: 4.69e+08
+[step 900 / 3814] running_loss: 3.4016 | val_loss: 3.5032 | num_eval_tokens: 10485760 | hellaswag: 0.2765 | obqa: 0.2780 | arc_easy: 0.3935 | arc_challenge: 0.2372
+[step 900 / 3814] loss: 3.4109 | throughput: 187557.0 tokens/s | grad_norm: 0.4587 | mfu: 54.6% | token_seen: 4.72e+08
+[step 905 / 3814] loss: 3.3297 | throughput: 187327.6 tokens/s | grad_norm: 0.3938 | mfu: 54.6% | token_seen: 4.74e+08
+[step 910 / 3814] loss: 3.4113 | throughput: 186999.9 tokens/s | grad_norm: 0.4003 | mfu: 54.5% | token_seen: 4.77e+08
+[step 915 / 3814] loss: 3.4388 | throughput: 188000.5 tokens/s | grad_norm: 0.4735 | mfu: 54.8% | token_seen: 4.80e+08
+[step 920 / 3814] loss: 3.2781 | throughput: 187409.1 tokens/s | grad_norm: 0.4482 | mfu: 54.6% | token_seen: 4.82e+08
+[step 925 / 3814] loss: 3.4423 | throughput: 187116.8 tokens/s | grad_norm: 0.4138 | mfu: 54.5% | token_seen: 4.85e+08
+[step 930 / 3814] loss: 3.3193 | throughput: 187599.6 tokens/s | grad_norm: 0.4729 | mfu: 54.7% | token_seen: 4.88e+08
+[step 935 / 3814] loss: 3.3379 | throughput: 186557.0 tokens/s | grad_norm: 0.4665 | mfu: 54.4% | token_seen: 4.90e+08
+[step 940 / 3814] loss: 3.3661 | throughput: 187142.7 tokens/s | grad_norm: 0.4271 | mfu: 54.5% | token_seen: 4.93e+08
+[step 945 / 3814] loss: 3.3184 | throughput: 187795.7 tokens/s | grad_norm: 0.3964 | mfu: 54.7% | token_seen: 4.95e+08
+[step 950 / 3814] loss: 3.4015 | throughput: 187291.0 tokens/s | grad_norm: 0.3913 | mfu: 54.6% | token_seen: 4.98e+08
+[step 955 / 3814] loss: 3.3443 | throughput: 187329.6 tokens/s | grad_norm: 0.4308 | mfu: 54.6% | token_seen: 5.01e+08
+[step 960 / 3814] loss: 3.4395 | throughput: 187031.3 tokens/s | grad_norm: 0.3910 | mfu: 54.5% | token_seen: 5.03e+08
+[step 965 / 3814] loss: 3.3656 | throughput: 186785.1 tokens/s | grad_norm: 0.4409 | mfu: 54.4% | token_seen: 5.06e+08
+[step 970 / 3814] loss: 3.3449 | throughput: 186410.8 tokens/s | grad_norm: 0.3650 | mfu: 54.3% | token_seen: 5.09e+08
+[step 975 / 3814] loss: 3.3365 | throughput: 186366.4 tokens/s | grad_norm: 0.3795 | mfu: 54.3% | token_seen: 5.11e+08
+[step 980 / 3814] loss: 3.3504 | throughput: 187307.1 tokens/s | grad_norm: 0.4408 | mfu: 54.6% | token_seen: 5.14e+08
+[step 985 / 3814] loss: 3.3905 | throughput: 187292.4 tokens/s | grad_norm: 0.4846 | mfu: 54.6% | token_seen: 5.16e+08
+[step 990 / 3814] loss: 3.2621 | throughput: 186401.7 tokens/s | grad_norm: 0.3682 | mfu: 54.3% | token_seen: 5.19e+08
+[step 995 / 3814] loss: 3.3017 | throughput: 186059.7 tokens/s | grad_norm: 0.4047 | mfu: 54.2% | token_seen: 5.22e+08
+[step 1000 / 3814] running_loss: 3.3513 | val_loss: 3.4681 | num_eval_tokens: 10485760 | hellaswag: 0.2858 | obqa: 0.2820 | arc_easy: 0.3952 | arc_challenge: 0.2346
+[step 1000 / 3814] loss: 3.2865 | throughput: 185686.8 tokens/s | grad_norm: 0.4276 | mfu: 54.1% | token_seen: 5.24e+08
+[step 1005 / 3814] loss: 3.3273 | throughput: 187684.2 tokens/s | grad_norm: 0.4016 | mfu: 54.7% | token_seen: 5.27e+08
+[step 1010 / 3814] loss: 3.3168 | throughput: 187192.3 tokens/s | grad_norm: 0.3739 | mfu: 54.5% | token_seen: 5.30e+08
+[step 1015 / 3814] loss: 3.3362 | throughput: 187140.0 tokens/s | grad_norm: 0.3844 | mfu: 54.5% | token_seen: 5.32e+08
+[step 1020 / 3814] loss: 3.3029 | throughput: 185971.0 tokens/s | grad_norm: 0.4096 | mfu: 54.2% | token_seen: 5.35e+08
+[step 1025 / 3814] loss: 3.3289 | throughput: 187209.1 tokens/s | grad_norm: 0.3862 | mfu: 54.5% | token_seen: 5.37e+08
+[step 1030 / 3814] loss: 3.2893 | throughput: 187161.4 tokens/s | grad_norm: 0.3915 | mfu: 54.5% | token_seen: 5.40e+08
+[step 1035 / 3814] loss: 3.3230 | throughput: 185842.4 tokens/s | grad_norm: 0.3947 | mfu: 54.1% | token_seen: 5.43e+08
+[step 1040 / 3814] loss: 3.3112 | throughput: 186105.4 tokens/s | grad_norm: 0.3854 | mfu: 54.2% | token_seen: 5.45e+08
+[step 1045 / 3814] loss: 3.3593 | throughput: 185527.8 tokens/s | grad_norm: 0.4217 | mfu: 54.1% | token_seen: 5.48e+08
+[step 1050 / 3814] loss: 3.2375 | throughput: 185414.4 tokens/s | grad_norm: 0.4168 | mfu: 54.0% | token_seen: 5.51e+08
+[step 1055 / 3814] loss: 3.3258 | throughput: 185772.5 tokens/s | grad_norm: 0.4648 | mfu: 54.1% | token_seen: 5.53e+08
+[step 1060 / 3814] loss: 3.3436 | throughput: 184877.1 tokens/s | grad_norm: 0.3748 | mfu: 53.9% | token_seen: 5.56e+08
+[step 1065 / 3814] loss: 3.2739 | throughput: 185626.4 tokens/s | grad_norm: 0.3664 | mfu: 54.1% | token_seen: 5.58e+08
+[step 1070 / 3814] loss: 3.2573 | throughput: 186020.3 tokens/s | grad_norm: 0.3973 | mfu: 54.2% | token_seen: 5.61e+08
+[step 1075 / 3814] loss: 3.3355 | throughput: 186949.2 tokens/s | grad_norm: 0.3935 | mfu: 54.5% | token_seen: 5.64e+08
+[step 1080 / 3814] loss: 3.3845 | throughput: 186837.2 tokens/s | grad_norm: 0.4033 | mfu: 54.4% | token_seen: 5.66e+08
+[step 1085 / 3814] loss: 3.3331 | throughput: 185515.5 tokens/s | grad_norm: 0.4326 | mfu: 54.0% | token_seen: 5.69e+08
+[step 1090 / 3814] loss: 3.3067 | throughput: 186736.9 tokens/s | grad_norm: 0.4379 | mfu: 54.4% | token_seen: 5.71e+08
+[step 1095 / 3814] loss: 3.3550 | throughput: 186005.0 tokens/s | grad_norm: 0.4565 | mfu: 54.2% | token_seen: 5.74e+08
+[step 1100 / 3814] running_loss: 3.3099 | val_loss: 3.4360 | num_eval_tokens: 10485760 | hellaswag: 0.2804 | obqa: 0.2940 | arc_easy: 0.3990 | arc_challenge: 0.2423
+[step 1100 / 3814] loss: 3.3509 | throughput: 185230.5 tokens/s | grad_norm: 0.3701 | mfu: 54.0% | token_seen: 5.77e+08
+[step 1105 / 3814] loss: 3.2773 | throughput: 186023.6 tokens/s | grad_norm: 0.3897 | mfu: 54.2% | token_seen: 5.79e+08
+[step 1110 / 3814] loss: 3.3121 | throughput: 186635.1 tokens/s | grad_norm: 0.3554 | mfu: 54.4% | token_seen: 5.82e+08
+[step 1115 / 3814] loss: 3.2933 | throughput: 185895.2 tokens/s | grad_norm: 0.3632 | mfu: 54.2% | token_seen: 5.85e+08
+[step 1120 / 3814] loss: 3.2008 | throughput: 186405.8 tokens/s | grad_norm: 0.4641 | mfu: 54.3% | token_seen: 5.87e+08
+[step 1125 / 3814] loss: 3.3298 | throughput: 187111.9 tokens/s | grad_norm: 0.4034 | mfu: 54.5% | token_seen: 5.90e+08
+[step 1130 / 3814] loss: 3.2625 | throughput: 187294.6 tokens/s | grad_norm: 0.3758 | mfu: 54.6% | token_seen: 5.92e+08
+[step 1135 / 3814] loss: 3.3324 | throughput: 187138.6 tokens/s | grad_norm: 0.4008 | mfu: 54.5% | token_seen: 5.95e+08
+[step 1140 / 3814] loss: 3.2698 | throughput: 186035.1 tokens/s | grad_norm: 0.4068 | mfu: 54.2% | token_seen: 5.98e+08
+[step 1145 / 3814] loss: 3.1508 | throughput: 185629.3 tokens/s | grad_norm: 0.3585 | mfu: 54.1% | token_seen: 6.00e+08
+[step 1150 / 3814] loss: 3.2705 | throughput: 185190.4 tokens/s | grad_norm: 0.3864 | mfu: 54.0% | token_seen: 6.03e+08
+[step 1155 / 3814] loss: 3.2566 | throughput: 185432.8 tokens/s | grad_norm: 0.3813 | mfu: 54.0% | token_seen: 6.06e+08
+[step 1160 / 3814] loss: 3.2210 | throughput: 185652.2 tokens/s | grad_norm: 0.3693 | mfu: 54.1% | token_seen: 6.08e+08
+[step 1165 / 3814] loss: 3.2561 | throughput: 186205.8 tokens/s | grad_norm: 0.3674 | mfu: 54.2% | token_seen: 6.11e+08
+[step 1170 / 3814] loss: 3.2679 | throughput: 186632.2 tokens/s | grad_norm: 0.3892 | mfu: 54.4% | token_seen: 6.13e+08
+[step 1175 / 3814] loss: 3.2206 | throughput: 186372.0 tokens/s | grad_norm: 0.3468 | mfu: 54.3% | token_seen: 6.16e+08
+[step 1180 / 3814] loss: 3.2629 | throughput: 186456.2 tokens/s | grad_norm: 0.3800 | mfu: 54.3% | token_seen: 6.19e+08
+[step 1185 / 3814] loss: 3.2434 | throughput: 185694.9 tokens/s | grad_norm: 0.4142 | mfu: 54.1% | token_seen: 6.21e+08
+[step 1190 / 3814] loss: 3.2950 | throughput: 186351.6 tokens/s | grad_norm: 0.3998 | mfu: 54.3% | token_seen: 6.24e+08
+[step 1195 / 3814] loss: 3.2256 | throughput: 186016.5 tokens/s | grad_norm: 0.3727 | mfu: 54.2% | token_seen: 6.27e+08
+[step 1200 / 3814] running_loss: 3.2737 | val_loss: 3.4050 | num_eval_tokens: 10485760 | hellaswag: 0.2848 | obqa: 0.3080 | arc_easy: 0.3977 | arc_challenge: 0.2398
+[step 1200 / 3814] loss: 3.2320 | throughput: 185576.5 tokens/s | grad_norm: 0.3511 | mfu: 54.1% | token_seen: 6.29e+08
+[step 1205 / 3814] loss: 3.2937 | throughput: 186137.4 tokens/s | grad_norm: 0.4245 | mfu: 54.2% | token_seen: 6.32e+08
+[step 1210 / 3814] loss: 3.3379 | throughput: 186105.3 tokens/s | grad_norm: 0.3712 | mfu: 54.2% | token_seen: 6.34e+08
+[step 1215 / 3814] loss: 3.2583 | throughput: 185553.0 tokens/s | grad_norm: 0.3739 | mfu: 54.1% | token_seen: 6.37e+08
+[step 1220 / 3814] loss: 3.2645 | throughput: 185687.9 tokens/s | grad_norm: 0.3763 | mfu: 54.1% | token_seen: 6.40e+08
+[step 1225 / 3814] loss: 3.2142 | throughput: 186497.7 tokens/s | grad_norm: 0.3919 | mfu: 54.3% | token_seen: 6.42e+08
+[step 1230 / 3814] loss: 3.2404 | throughput: 186285.2 tokens/s | grad_norm: 0.3334 | mfu: 54.3% | token_seen: 6.45e+08
+[step 1235 / 3814] loss: 3.2433 | throughput: 186521.2 tokens/s | grad_norm: 0.3776 | mfu: 54.3% | token_seen: 6.47e+08
+[step 1240 / 3814] loss: 3.2727 | throughput: 187506.6 tokens/s | grad_norm: 0.3486 | mfu: 54.6% | token_seen: 6.50e+08
+[step 1245 / 3814] loss: 3.2947 | throughput: 186915.6 tokens/s | grad_norm: 0.4034 | mfu: 54.5% | token_seen: 6.53e+08
+[step 1250 / 3814] loss: 3.2617 | throughput: 185070.8 tokens/s | grad_norm: 0.3586 | mfu: 53.9% | token_seen: 6.55e+08
+[step 1255 / 3814] loss: 3.2318 | throughput: 186931.4 tokens/s | grad_norm: 0.3511 | mfu: 54.5% | token_seen: 6.58e+08
+[step 1260 / 3814] loss: 3.2833 | throughput: 186227.6 tokens/s | grad_norm: 0.3840 | mfu: 54.3% | token_seen: 6.61e+08
+[step 1265 / 3814] loss: 3.2436 | throughput: 185479.7 tokens/s | grad_norm: 0.3870 | mfu: 54.0% | token_seen: 6.63e+08
+[step 1270 / 3814] loss: 3.2468 | throughput: 185709.8 tokens/s | grad_norm: 0.3835 | mfu: 54.1% | token_seen: 6.66e+08
+[step 1275 / 3814] loss: 3.2700 | throughput: 185626.5 tokens/s | grad_norm: 0.3546 | mfu: 54.1% | token_seen: 6.68e+08
+[step 1280 / 3814] loss: 3.1984 | throughput: 187142.8 tokens/s | grad_norm: 0.3451 | mfu: 54.5% | token_seen: 6.71e+08
+[step 1285 / 3814] loss: 3.1997 | throughput: 185948.4 tokens/s | grad_norm: 0.4043 | mfu: 54.2% | token_seen: 6.74e+08
+[step 1290 / 3814] loss: 3.2508 | throughput: 186955.0 tokens/s | grad_norm: 0.3807 | mfu: 54.5% | token_seen: 6.76e+08
+[step 1295 / 3814] loss: 3.2387 | throughput: 186867.4 tokens/s | grad_norm: 0.3715 | mfu: 54.4% | token_seen: 6.79e+08
+[step 1300 / 3814] running_loss: 3.2512 | val_loss: 3.3848 | num_eval_tokens: 10485760 | hellaswag: 0.2836 | obqa: 0.2960 | arc_easy: 0.4019 | arc_challenge: 0.2372
+[step 1300 / 3814] loss: 3.2292 | throughput: 185679.2 tokens/s | grad_norm: 0.3619 | mfu: 54.1% | token_seen: 6.82e+08
+[step 1305 / 3814] loss: 3.2204 | throughput: 185863.7 tokens/s | grad_norm: 0.3638 | mfu: 54.1% | token_seen: 6.84e+08
+[step 1310 / 3814] loss: 3.2675 | throughput: 186594.4 tokens/s | grad_norm: 0.3697 | mfu: 54.4% | token_seen: 6.87e+08
+[step 1315 / 3814] loss: 3.2897 | throughput: 185597.6 tokens/s | grad_norm: 0.4083 | mfu: 54.1% | token_seen: 6.89e+08
+[step 1320 / 3814] loss: 3.1684 | throughput: 187341.1 tokens/s | grad_norm: 0.3545 | mfu: 54.6% | token_seen: 6.92e+08
+[step 1325 / 3814] loss: 3.2173 | throughput: 186078.2 tokens/s | grad_norm: 0.4082 | mfu: 54.2% | token_seen: 6.95e+08
+[step 1330 / 3814] loss: 3.2828 | throughput: 186226.1 tokens/s | grad_norm: 0.3633 | mfu: 54.3% | token_seen: 6.97e+08
+[step 1335 / 3814] loss: 3.2385 | throughput: 186385.0 tokens/s | grad_norm: 0.3730 | mfu: 54.3% | token_seen: 7.00e+08
+[step 1340 / 3814] loss: 3.1776 | throughput: 185969.1 tokens/s | grad_norm: 0.3960 | mfu: 54.2% | token_seen: 7.03e+08
+[step 1345 / 3814] loss: 3.2427 | throughput: 186989.0 tokens/s | grad_norm: 0.3575 | mfu: 54.5% | token_seen: 7.05e+08
+[step 1350 / 3814] loss: 3.1732 | throughput: 185564.6 tokens/s | grad_norm: 0.3931 | mfu: 54.1% | token_seen: 7.08e+08
+[step 1355 / 3814] loss: 3.2896 | throughput: 185500.1 tokens/s | grad_norm: 0.3217 | mfu: 54.0% | token_seen: 7.10e+08
+[step 1360 / 3814] loss: 3.2798 | throughput: 185709.5 tokens/s | grad_norm: 0.3797 | mfu: 54.1% | token_seen: 7.13e+08
+[step 1365 / 3814] loss: 3.2143 | throughput: 186832.8 tokens/s | grad_norm: 0.3736 | mfu: 54.4% | token_seen: 7.16e+08
+[step 1370 / 3814] loss: 3.1836 | throughput: 186277.1 tokens/s | grad_norm: 0.3192 | mfu: 54.3% | token_seen: 7.18e+08
+[step 1375 / 3814] loss: 3.2299 | throughput: 185819.0 tokens/s | grad_norm: 0.3672 | mfu: 54.1% | token_seen: 7.21e+08
+[step 1380 / 3814] loss: 3.2869 | throughput: 185449.7 tokens/s | grad_norm: 0.3704 | mfu: 54.0% | token_seen: 7.24e+08
+[step 1385 / 3814] loss: 3.2541 | throughput: 186711.6 tokens/s | grad_norm: 0.3717 | mfu: 54.4% | token_seen: 7.26e+08
+[step 1390 / 3814] loss: 3.1728 | throughput: 186772.2 tokens/s | grad_norm: 0.4356 | mfu: 54.4% | token_seen: 7.29e+08
+[step 1395 / 3814] loss: 3.2628 | throughput: 186099.6 tokens/s | grad_norm: 0.3927 | mfu: 54.2% | token_seen: 7.31e+08
+[step 1400 / 3814] running_loss: 3.2342 | val_loss: 3.3656 | num_eval_tokens: 10485760 | hellaswag: 0.2876 | obqa: 0.2900 | arc_easy: 0.4011 | arc_challenge: 0.2509
+[step 1400 / 3814] loss: 3.2188 | throughput: 186522.5 tokens/s | grad_norm: 0.3899 | mfu: 54.3% | token_seen: 7.34e+08
+[step 1405 / 3814] loss: 3.1952 | throughput: 185604.1 tokens/s | grad_norm: 0.4060 | mfu: 54.1% | token_seen: 7.37e+08
+[step 1410 / 3814] loss: 3.1704 | throughput: 186768.9 tokens/s | grad_norm: 0.3361 | mfu: 54.4% | token_seen: 7.39e+08
+[step 1415 / 3814] loss: 3.2324 | throughput: 186265.0 tokens/s | grad_norm: 0.3533 | mfu: 54.3% | token_seen: 7.42e+08
+[step 1420 / 3814] loss: 3.2545 | throughput: 185720.2 tokens/s | grad_norm: 0.4021 | mfu: 54.1% | token_seen: 7.44e+08
+[step 1425 / 3814] loss: 3.2460 | throughput: 186991.9 tokens/s | grad_norm: 0.3733 | mfu: 54.5% | token_seen: 7.47e+08
+[step 1430 / 3814] loss: 3.2258 | throughput: 185758.3 tokens/s | grad_norm: 0.3324 | mfu: 54.1% | token_seen: 7.50e+08
+[step 1435 / 3814] loss: 3.1997 | throughput: 185994.7 tokens/s | grad_norm: 0.3772 | mfu: 54.2% | token_seen: 7.52e+08
+[step 1440 / 3814] loss: 3.2722 | throughput: 186677.4 tokens/s | grad_norm: 0.3634 | mfu: 54.4% | token_seen: 7.55e+08
+[step 1445 / 3814] loss: 3.2184 | throughput: 185096.4 tokens/s | grad_norm: 0.3279 | mfu: 53.9% | token_seen: 7.58e+08
+[step 1450 / 3814] loss: 3.1543 | throughput: 185138.2 tokens/s | grad_norm: 0.2949 | mfu: 53.9% | token_seen: 7.60e+08
+[step 1455 / 3814] loss: 3.2105 | throughput: 185979.6 tokens/s | grad_norm: 0.3863 | mfu: 54.2% | token_seen: 7.63e+08
+[step 1460 / 3814] loss: 3.2519 | throughput: 185795.7 tokens/s | grad_norm: 0.3513 | mfu: 54.1% | token_seen: 7.65e+08
+[step 1465 / 3814] loss: 3.1715 | throughput: 184973.8 tokens/s | grad_norm: 0.3276 | mfu: 53.9% | token_seen: 7.68e+08
+[step 1470 / 3814] loss: 3.1966 | throughput: 186046.6 tokens/s | grad_norm: 0.3265 | mfu: 54.2% | token_seen: 7.71e+08
+[step 1475 / 3814] loss: 3.1871 | throughput: 184659.9 tokens/s | grad_norm: 0.3469 | mfu: 53.8% | token_seen: 7.73e+08
+[step 1480 / 3814] loss: 3.1709 | throughput: 185382.2 tokens/s | grad_norm: 0.3517 | mfu: 54.0% | token_seen: 7.76e+08
+[step 1485 / 3814] loss: 3.1183 | throughput: 185811.3 tokens/s | grad_norm: 0.2934 | mfu: 54.1% | token_seen: 7.79e+08
+[step 1490 / 3814] loss: 3.2624 | throughput: 185234.7 tokens/s | grad_norm: 0.3294 | mfu: 54.0% | token_seen: 7.81e+08
+[step 1495 / 3814] loss: 3.2146 | throughput: 185108.2 tokens/s | grad_norm: 0.3362 | mfu: 53.9% | token_seen: 7.84e+08
+[step 1500 / 3814] running_loss: 3.2100 | val_loss: 3.3505 | num_eval_tokens: 10485760 | hellaswag: 0.2884 | obqa: 0.2760 | arc_easy: 0.3998 | arc_challenge: 0.2568
+[step 1500 / 3814] loss: 3.2948 | throughput: 183725.9 tokens/s | grad_norm: 0.3940 | mfu: 53.5% | token_seen: 7.86e+08
+[step 1505 / 3814] loss: 3.1970 | throughput: 183769.3 tokens/s | grad_norm: 0.3135 | mfu: 53.5% | token_seen: 7.89e+08
+[step 1510 / 3814] loss: 3.1186 | throughput: 185173.3 tokens/s | grad_norm: 0.3116 | mfu: 53.9% | token_seen: 7.92e+08
+[step 1515 / 3814] loss: 3.1324 | throughput: 185419.6 tokens/s | grad_norm: 0.3399 | mfu: 54.0% | token_seen: 7.94e+08
+[step 1520 / 3814] loss: 3.1578 | throughput: 185538.1 tokens/s | grad_norm: 0.3678 | mfu: 54.1% | token_seen: 7.97e+08
+[step 1525 / 3814] loss: 3.3095 | throughput: 186167.6 tokens/s | grad_norm: 0.4582 | mfu: 54.2% | token_seen: 8.00e+08
+[step 1530 / 3814] loss: 3.2082 | throughput: 185238.5 tokens/s | grad_norm: 0.3412 | mfu: 54.0% | token_seen: 8.02e+08
+[step 1535 / 3814] loss: 3.2210 | throughput: 184644.7 tokens/s | grad_norm: 0.3389 | mfu: 53.8% | token_seen: 8.05e+08
+[step 1540 / 3814] loss: 3.1578 | throughput: 184866.9 tokens/s | grad_norm: 0.3677 | mfu: 53.9% | token_seen: 8.07e+08
+[step 1545 / 3814] loss: 3.2258 | throughput: 181507.6 tokens/s | grad_norm: 0.3158 | mfu: 52.9% | token_seen: 8.10e+08
+[step 1550 / 3814] loss: 3.1782 | throughput: 180407.5 tokens/s | grad_norm: 0.3880 | mfu: 52.6% | token_seen: 8.13e+08
+[step 1555 / 3814] loss: 3.2013 | throughput: 181342.7 tokens/s | grad_norm: 0.3547 | mfu: 52.8% | token_seen: 8.15e+08
+[step 1560 / 3814] loss: 3.1236 | throughput: 181416.7 tokens/s | grad_norm: 0.4165 | mfu: 52.9% | token_seen: 8.18e+08
+[step 1565 / 3814] loss: 3.2300 | throughput: 184592.9 tokens/s | grad_norm: 0.3419 | mfu: 53.8% | token_seen: 8.21e+08
+[step 1570 / 3814] loss: 3.1734 | throughput: 184032.2 tokens/s | grad_norm: 0.3501 | mfu: 53.6% | token_seen: 8.23e+08
+[step 1575 / 3814] loss: 3.1848 | throughput: 184580.9 tokens/s | grad_norm: 0.3120 | mfu: 53.8% | token_seen: 8.26e+08
+[step 1580 / 3814] loss: 3.1422 | throughput: 184750.1 tokens/s | grad_norm: 0.3244 | mfu: 53.8% | token_seen: 8.28e+08
+[step 1585 / 3814] loss: 3.1680 | throughput: 183614.5 tokens/s | grad_norm: 0.3288 | mfu: 53.5% | token_seen: 8.31e+08
+[step 1590 / 3814] loss: 3.1672 | throughput: 184581.9 tokens/s | grad_norm: 0.2493 | mfu: 53.8% | token_seen: 8.34e+08
+[step 1595 / 3814] loss: 3.1297 | throughput: 184217.0 tokens/s | grad_norm: 0.3923 | mfu: 53.7% | token_seen: 8.36e+08
+[step 1600 / 3814] running_loss: 3.1861 | val_loss: 3.3355 | num_eval_tokens: 10485760 | hellaswag: 0.2875 | obqa: 0.2900 | arc_easy: 0.3986 | arc_challenge: 0.2415
+[step 1600 / 3814] loss: 3.2405 | throughput: 182744.5 tokens/s | grad_norm: 0.3855 | mfu: 53.2% | token_seen: 8.39e+08
+[step 1605 / 3814] loss: 3.2306 | throughput: 181942.3 tokens/s | grad_norm: 0.3905 | mfu: 53.0% | token_seen: 8.41e+08
+[step 1610 / 3814] loss: 3.1772 | throughput: 180377.1 tokens/s | grad_norm: 0.3641 | mfu: 52.6% | token_seen: 8.44e+08
+[step 1615 / 3814] loss: 3.1244 | throughput: 184983.6 tokens/s | grad_norm: 0.3247 | mfu: 53.9% | token_seen: 8.47e+08
+[step 1620 / 3814] loss: 3.1780 | throughput: 184117.9 tokens/s | grad_norm: 0.4395 | mfu: 53.6% | token_seen: 8.49e+08
+[step 1625 / 3814] loss: 3.1467 | throughput: 180845.1 tokens/s | grad_norm: 0.3417 | mfu: 52.7% | token_seen: 8.52e+08
+[step 1630 / 3814] loss: 3.2120 | throughput: 183626.2 tokens/s | grad_norm: 0.3284 | mfu: 53.5% | token_seen: 8.55e+08
+[step 1635 / 3814] loss: 3.2301 | throughput: 185013.2 tokens/s | grad_norm: 0.3561 | mfu: 53.9% | token_seen: 8.57e+08
+[step 1640 / 3814] loss: 3.2094 | throughput: 182739.6 tokens/s | grad_norm: 0.3277 | mfu: 53.2% | token_seen: 8.60e+08
+[step 1645 / 3814] loss: 3.1304 | throughput: 184426.6 tokens/s | grad_norm: 0.3295 | mfu: 53.7% | token_seen: 8.62e+08
+[step 1650 / 3814] loss: 3.1845 | throughput: 184173.3 tokens/s | grad_norm: 0.3392 | mfu: 53.7% | token_seen: 8.65e+08
+[step 1655 / 3814] loss: 3.2002 | throughput: 183541.7 tokens/s | grad_norm: 0.3146 | mfu: 53.5% | token_seen: 8.68e+08
+[step 1660 / 3814] loss: 3.1743 | throughput: 184261.7 tokens/s | grad_norm: 0.3374 | mfu: 53.7% | token_seen: 8.70e+08
+[step 1665 / 3814] loss: 3.2190 | throughput: 183718.9 tokens/s | grad_norm: 0.3372 | mfu: 53.5% | token_seen: 8.73e+08
+[step 1670 / 3814] loss: 3.1337 | throughput: 181930.7 tokens/s | grad_norm: 0.3063 | mfu: 53.0% | token_seen: 8.76e+08
+[step 1675 / 3814] loss: 3.1076 | throughput: 176875.2 tokens/s | grad_norm: 0.3269 | mfu: 51.5% | token_seen: 8.78e+08
+[step 1680 / 3814] loss: 3.0512 | throughput: 184023.1 tokens/s | grad_norm: 0.3216 | mfu: 53.6% | token_seen: 8.81e+08
+[step 1685 / 3814] loss: 3.1419 | throughput: 178620.1 tokens/s | grad_norm: 0.3855 | mfu: 52.0% | token_seen: 8.83e+08
+[step 1690 / 3814] loss: 3.1354 | throughput: 183754.2 tokens/s | grad_norm: 0.3449 | mfu: 53.5% | token_seen: 8.86e+08
+[step 1695 / 3814] loss: 3.0732 | throughput: 181976.2 tokens/s | grad_norm: 0.3172 | mfu: 53.0% | token_seen: 8.89e+08
+[step 1700 / 3814] running_loss: 3.1643 | val_loss: 3.3185 | num_eval_tokens: 10485760 | hellaswag: 0.2891 | obqa: 0.2740 | arc_easy: 0.4217 | arc_challenge: 0.2500
+[step 1700 / 3814] loss: 3.1196 | throughput: 184459.0 tokens/s | grad_norm: 0.3526 | mfu: 53.7% | token_seen: 8.91e+08
+[step 1705 / 3814] loss: 3.1016 | throughput: 181308.0 tokens/s | grad_norm: 0.3042 | mfu: 52.8% | token_seen: 8.94e+08
+[step 1710 / 3814] loss: 3.3154 | throughput: 185307.7 tokens/s | grad_norm: 0.4805 | mfu: 54.0% | token_seen: 8.97e+08
+[step 1715 / 3814] loss: 3.1517 | throughput: 180132.9 tokens/s | grad_norm: 0.3161 | mfu: 52.5% | token_seen: 8.99e+08
+[step 1720 / 3814] loss: 3.1271 | throughput: 180582.7 tokens/s | grad_norm: 0.3247 | mfu: 52.6% | token_seen: 9.02e+08
+[step 1725 / 3814] loss: 3.0661 | throughput: 181439.5 tokens/s | grad_norm: 0.3909 | mfu: 52.9% | token_seen: 9.04e+08
+[step 1730 / 3814] loss: 3.1487 | throughput: 183275.0 tokens/s | grad_norm: 0.3427 | mfu: 53.4% | token_seen: 9.07e+08
+[step 1735 / 3814] loss: 3.1806 | throughput: 184908.2 tokens/s | grad_norm: 0.3284 | mfu: 53.9% | token_seen: 9.10e+08
+[step 1740 / 3814] loss: 3.1519 | throughput: 184013.2 tokens/s | grad_norm: 0.3665 | mfu: 53.6% | token_seen: 9.12e+08
+[step 1745 / 3814] loss: 3.2146 | throughput: 183086.7 tokens/s | grad_norm: 0.3552 | mfu: 53.3% | token_seen: 9.15e+08
+[step 1750 / 3814] loss: 3.1290 | throughput: 182980.8 tokens/s | grad_norm: 0.3341 | mfu: 53.3% | token_seen: 9.18e+08
+[step 1755 / 3814] loss: 3.1958 | throughput: 182968.7 tokens/s | grad_norm: 0.3425 | mfu: 53.3% | token_seen: 9.20e+08
+[step 1760 / 3814] loss: 3.1554 | throughput: 180511.6 tokens/s | grad_norm: 0.3209 | mfu: 52.6% | token_seen: 9.23e+08
+[step 1765 / 3814] loss: 3.1799 | throughput: 184254.9 tokens/s | grad_norm: 0.3253 | mfu: 53.7% | token_seen: 9.25e+08
+[step 1770 / 3814] loss: 3.1292 | throughput: 182372.7 tokens/s | grad_norm: 0.3358 | mfu: 53.1% | token_seen: 9.28e+08
+[step 1775 / 3814] loss: 3.2134 | throughput: 184930.6 tokens/s | grad_norm: 0.3473 | mfu: 53.9% | token_seen: 9.31e+08
+[step 1780 / 3814] loss: 3.2046 | throughput: 181163.8 tokens/s | grad_norm: 0.3633 | mfu: 52.8% | token_seen: 9.33e+08
+[step 1785 / 3814] loss: 3.1150 | throughput: 184473.8 tokens/s | grad_norm: 0.3089 | mfu: 53.7% | token_seen: 9.36e+08
+[step 1790 / 3814] loss: 3.1465 | throughput: 184757.6 tokens/s | grad_norm: 0.3418 | mfu: 53.8% | token_seen: 9.38e+08
+[step 1795 / 3814] loss: 3.1346 | throughput: 184512.5 tokens/s | grad_norm: 0.3526 | mfu: 53.8% | token_seen: 9.41e+08
+[step 1800 / 3814] running_loss: 3.1464 | val_loss: 3.3078 | num_eval_tokens: 10485760 | hellaswag: 0.2901 | obqa: 0.2880 | arc_easy: 0.4061 | arc_challenge: 0.2517
+[step 1800 / 3814] loss: 3.1682 | throughput: 180607.5 tokens/s | grad_norm: 0.3101 | mfu: 52.6% | token_seen: 9.44e+08
+[step 1805 / 3814] loss: 3.1423 | throughput: 184491.7 tokens/s | grad_norm: 0.3465 | mfu: 53.8% | token_seen: 9.46e+08
+[step 1810 / 3814] loss: 3.0630 | throughput: 181493.1 tokens/s | grad_norm: 0.3566 | mfu: 52.9% | token_seen: 9.49e+08
+[step 1815 / 3814] loss: 3.1437 | throughput: 184784.5 tokens/s | grad_norm: 0.3502 | mfu: 53.8% | token_seen: 9.52e+08
+[step 1820 / 3814] loss: 3.0215 | throughput: 184907.8 tokens/s | grad_norm: 0.3393 | mfu: 53.9% | token_seen: 9.54e+08
+[step 1825 / 3814] loss: 3.1382 | throughput: 181760.5 tokens/s | grad_norm: 0.3260 | mfu: 53.0% | token_seen: 9.57e+08
+[step 1830 / 3814] loss: 3.1505 | throughput: 182976.3 tokens/s | grad_norm: 0.3738 | mfu: 53.3% | token_seen: 9.59e+08
+[step 1835 / 3814] loss: 3.2209 | throughput: 181969.6 tokens/s | grad_norm: 0.3027 | mfu: 53.0% | token_seen: 9.62e+08
+[step 1840 / 3814] loss: 3.1002 | throughput: 181367.9 tokens/s | grad_norm: 0.3472 | mfu: 52.8% | token_seen: 9.65e+08
+[step 1845 / 3814] loss: 3.1635 | throughput: 180274.0 tokens/s | grad_norm: 0.3377 | mfu: 52.5% | token_seen: 9.67e+08
+[step 1850 / 3814] loss: 3.1955 | throughput: 183708.7 tokens/s | grad_norm: 0.3563 | mfu: 53.5% | token_seen: 9.70e+08
+[step 1855 / 3814] loss: 3.1629 | throughput: 183441.8 tokens/s | grad_norm: 0.3222 | mfu: 53.4% | token_seen: 9.73e+08
+[step 1860 / 3814] loss: 3.1199 | throughput: 182662.2 tokens/s | grad_norm: 0.3350 | mfu: 53.2% | token_seen: 9.75e+08
+[step 1865 / 3814] loss: 3.1114 | throughput: 180209.9 tokens/s | grad_norm: 0.3430 | mfu: 52.5% | token_seen: 9.78e+08
+[step 1870 / 3814] loss: 3.1839 | throughput: 177106.9 tokens/s | grad_norm: 0.2984 | mfu: 51.6% | token_seen: 9.80e+08
+[step 1875 / 3814] loss: 3.0905 | throughput: 183740.4 tokens/s | grad_norm: 0.2763 | mfu: 53.5% | token_seen: 9.83e+08
+[step 1880 / 3814] loss: 3.0909 | throughput: 184200.6 tokens/s | grad_norm: 0.3353 | mfu: 53.7% | token_seen: 9.86e+08
+[step 1885 / 3814] loss: 3.0909 | throughput: 181823.5 tokens/s | grad_norm: 0.3181 | mfu: 53.0% | token_seen: 9.88e+08
+[step 1890 / 3814] loss: 3.0765 | throughput: 183505.4 tokens/s | grad_norm: 0.3294 | mfu: 53.5% | token_seen: 9.91e+08
+[step 1895 / 3814] loss: 3.0757 | throughput: 178996.5 tokens/s | grad_norm: 0.3427 | mfu: 52.1% | token_seen: 9.94e+08
+[step 1900 / 3814] running_loss: 3.1339 | val_loss: 3.2996 | num_eval_tokens: 10485760 | hellaswag: 0.2891 | obqa: 0.2840 | arc_easy: 0.4175 | arc_challenge: 0.2594
+[step 1900 / 3814] loss: 3.0678 | throughput: 183404.5 tokens/s | grad_norm: 0.3151 | mfu: 53.4% | token_seen: 9.96e+08
+[step 1905 / 3814] loss: 3.1201 | throughput: 184510.3 tokens/s | grad_norm: 0.3360 | mfu: 53.8% | token_seen: 9.99e+08
+[step 1910 / 3814] loss: 3.1343 | throughput: 182940.4 tokens/s | grad_norm: 0.3359 | mfu: 53.3% | token_seen: 1.00e+09
+[step 1915 / 3814] loss: 3.1295 | throughput: 184407.5 tokens/s | grad_norm: 0.3548 | mfu: 53.7% | token_seen: 1.00e+09
+[step 1920 / 3814] loss: 3.0302 | throughput: 182815.2 tokens/s | grad_norm: 0.3753 | mfu: 53.3% | token_seen: 1.01e+09
+[step 1925 / 3814] loss: 3.2160 | throughput: 182884.8 tokens/s | grad_norm: 0.3580 | mfu: 53.3% | token_seen: 1.01e+09
+[step 1930 / 3814] loss: 3.1604 | throughput: 184408.4 tokens/s | grad_norm: 0.3188 | mfu: 53.7% | token_seen: 1.01e+09
+[step 1935 / 3814] loss: 3.1286 | throughput: 184627.8 tokens/s | grad_norm: 0.3507 | mfu: 53.8% | token_seen: 1.01e+09
+[step 1940 / 3814] loss: 3.1531 | throughput: 183694.8 tokens/s | grad_norm: 0.3109 | mfu: 53.5% | token_seen: 1.02e+09
+[step 1945 / 3814] loss: 3.0805 | throughput: 185726.3 tokens/s | grad_norm: 0.3310 | mfu: 54.1% | token_seen: 1.02e+09
+[step 1950 / 3814] loss: 3.2123 | throughput: 177708.4 tokens/s | grad_norm: 0.3630 | mfu: 51.8% | token_seen: 1.02e+09
+[step 1955 / 3814] loss: 3.1116 | throughput: 183682.2 tokens/s | grad_norm: 0.3010 | mfu: 53.5% | token_seen: 1.02e+09
+[step 1960 / 3814] loss: 3.0785 | throughput: 182478.5 tokens/s | grad_norm: 0.2949 | mfu: 53.2% | token_seen: 1.03e+09
+[step 1965 / 3814] loss: 3.0703 | throughput: 176770.6 tokens/s | grad_norm: 0.3346 | mfu: 51.5% | token_seen: 1.03e+09
+[step 1970 / 3814] loss: 3.1771 | throughput: 182658.9 tokens/s | grad_norm: 0.3617 | mfu: 53.2% | token_seen: 1.03e+09
+[step 1975 / 3814] loss: 3.1145 | throughput: 184126.7 tokens/s | grad_norm: 0.2956 | mfu: 53.6% | token_seen: 1.04e+09
+[step 1980 / 3814] loss: 3.0577 | throughput: 181990.5 tokens/s | grad_norm: 0.4913 | mfu: 53.0% | token_seen: 1.04e+09
+[step 1985 / 3814] loss: 3.0692 | throughput: 182148.9 tokens/s | grad_norm: 0.2980 | mfu: 53.1% | token_seen: 1.04e+09
+[step 1990 / 3814] loss: 3.0723 | throughput: 181171.8 tokens/s | grad_norm: 0.3056 | mfu: 52.8% | token_seen: 1.04e+09
+[step 1995 / 3814] loss: 3.0986 | throughput: 180003.9 tokens/s | grad_norm: 0.2864 | mfu: 52.4% | token_seen: 1.05e+09
+[step 2000 / 3814] running_loss: 3.1194 | val_loss: 3.2873 | num_eval_tokens: 10485760 | hellaswag: 0.2896 | obqa: 0.2980 | arc_easy: 0.4087 | arc_challenge: 0.2509
+[step 2000 / 3814] loss: 3.1110 | throughput: 178340.6 tokens/s | grad_norm: 0.3013 | mfu: 52.0% | token_seen: 1.05e+09
+[step 2005 / 3814] loss: 3.0343 | throughput: 184942.0 tokens/s | grad_norm: 0.2978 | mfu: 53.9% | token_seen: 1.05e+09
+[step 2010 / 3814] loss: 3.1018 | throughput: 184414.4 tokens/s | grad_norm: 0.3275 | mfu: 53.7% | token_seen: 1.05e+09
+[step 2015 / 3814] loss: 3.0463 | throughput: 179829.4 tokens/s | grad_norm: 0.3632 | mfu: 52.4% | token_seen: 1.06e+09
+[step 2020 / 3814] loss: 3.0004 | throughput: 181529.4 tokens/s | grad_norm: 0.3103 | mfu: 52.9% | token_seen: 1.06e+09
+[step 2025 / 3814] loss: 3.1113 | throughput: 179713.7 tokens/s | grad_norm: 0.3428 | mfu: 52.4% | token_seen: 1.06e+09
+[step 2030 / 3814] loss: 3.0868 | throughput: 180152.3 tokens/s | grad_norm: 0.3278 | mfu: 52.5% | token_seen: 1.06e+09
+[step 2035 / 3814] loss: 3.0752 | throughput: 185407.6 tokens/s | grad_norm: 0.2982 | mfu: 54.0% | token_seen: 1.07e+09
+[step 2040 / 3814] loss: 3.0859 | throughput: 182960.5 tokens/s | grad_norm: 0.3626 | mfu: 53.3% | token_seen: 1.07e+09
+[step 2045 / 3814] loss: 3.1542 | throughput: 180397.8 tokens/s | grad_norm: 0.3042 | mfu: 52.6% | token_seen: 1.07e+09
+[step 2050 / 3814] loss: 3.1090 | throughput: 184801.4 tokens/s | grad_norm: 0.3373 | mfu: 53.8% | token_seen: 1.07e+09
+[step 2055 / 3814] loss: 3.0652 | throughput: 184084.9 tokens/s | grad_norm: 0.3047 | mfu: 53.6% | token_seen: 1.08e+09
+[step 2060 / 3814] loss: 3.1255 | throughput: 182021.6 tokens/s | grad_norm: 0.3038 | mfu: 53.0% | token_seen: 1.08e+09
+[step 2065 / 3814] loss: 3.0934 | throughput: 184745.2 tokens/s | grad_norm: 0.3403 | mfu: 53.8% | token_seen: 1.08e+09
+[step 2070 / 3814] loss: 3.1117 | throughput: 184859.0 tokens/s | grad_norm: 0.3016 | mfu: 53.9% | token_seen: 1.09e+09
+[step 2075 / 3814] loss: 3.1130 | throughput: 182535.4 tokens/s | grad_norm: 0.3028 | mfu: 53.2% | token_seen: 1.09e+09
+[step 2080 / 3814] loss: 3.1123 | throughput: 183245.1 tokens/s | grad_norm: 0.3486 | mfu: 53.4% | token_seen: 1.09e+09
+[step 2085 / 3814] loss: 3.0719 | throughput: 183756.8 tokens/s | grad_norm: 0.3013 | mfu: 53.5% | token_seen: 1.09e+09
+[step 2090 / 3814] loss: 3.0831 | throughput: 181619.9 tokens/s | grad_norm: 0.3379 | mfu: 52.9% | token_seen: 1.10e+09
+[step 2095 / 3814] loss: 3.1543 | throughput: 181253.5 tokens/s | grad_norm: 0.3499 | mfu: 52.8% | token_seen: 1.10e+09
+[step 2100 / 3814] running_loss: 3.0914 | val_loss: 3.2794 | num_eval_tokens: 10485760 | hellaswag: 0.2926 | obqa: 0.2940 | arc_easy: 0.4091 | arc_challenge: 0.2543
+[step 2100 / 3814] loss: 3.0386 | throughput: 182402.5 tokens/s | grad_norm: 0.2929 | mfu: 53.1% | token_seen: 1.10e+09
+[step 2105 / 3814] loss: 3.0170 | throughput: 182731.2 tokens/s | grad_norm: 0.3036 | mfu: 53.2% | token_seen: 1.10e+09
+[step 2110 / 3814] loss: 3.1066 | throughput: 181917.5 tokens/s | grad_norm: 0.2967 | mfu: 53.0% | token_seen: 1.11e+09
+[step 2115 / 3814] loss: 3.1112 | throughput: 184663.2 tokens/s | grad_norm: 0.2933 | mfu: 53.8% | token_seen: 1.11e+09
+[step 2120 / 3814] loss: 3.0539 | throughput: 182639.1 tokens/s | grad_norm: 0.3401 | mfu: 53.2% | token_seen: 1.11e+09
+[step 2125 / 3814] loss: 3.1744 | throughput: 183569.0 tokens/s | grad_norm: 0.3531 | mfu: 53.5% | token_seen: 1.11e+09
+[step 2130 / 3814] loss: 3.0873 | throughput: 181265.6 tokens/s | grad_norm: 0.2998 | mfu: 52.8% | token_seen: 1.12e+09
+[step 2135 / 3814] loss: 3.0759 | throughput: 183953.5 tokens/s | grad_norm: 0.2816 | mfu: 53.6% | token_seen: 1.12e+09
+[step 2140 / 3814] loss: 3.1465 | throughput: 180555.7 tokens/s | grad_norm: 0.3047 | mfu: 52.6% | token_seen: 1.12e+09
+[step 2145 / 3814] loss: 3.1424 | throughput: 179632.2 tokens/s | grad_norm: 0.3324 | mfu: 52.3% | token_seen: 1.12e+09
+[step 2150 / 3814] loss: 3.1350 | throughput: 180872.1 tokens/s | grad_norm: 0.2870 | mfu: 52.7% | token_seen: 1.13e+09
+[step 2155 / 3814] loss: 3.0625 | throughput: 181353.8 tokens/s | grad_norm: 0.2663 | mfu: 52.8% | token_seen: 1.13e+09
+[step 2160 / 3814] loss: 3.0619 | throughput: 182108.4 tokens/s | grad_norm: 0.3486 | mfu: 53.1% | token_seen: 1.13e+09
+[step 2165 / 3814] loss: 3.1020 | throughput: 185120.6 tokens/s | grad_norm: 0.3255 | mfu: 53.9% | token_seen: 1.14e+09
+[step 2170 / 3814] loss: 3.0632 | throughput: 183083.9 tokens/s | grad_norm: 0.2973 | mfu: 53.3% | token_seen: 1.14e+09
+[step 2175 / 3814] loss: 3.1113 | throughput: 177994.6 tokens/s | grad_norm: 0.3109 | mfu: 51.9% | token_seen: 1.14e+09
+[step 2180 / 3814] loss: 3.0824 | throughput: 180168.7 tokens/s | grad_norm: 0.3179 | mfu: 52.5% | token_seen: 1.14e+09
+[step 2185 / 3814] loss: 3.0625 | throughput: 181481.4 tokens/s | grad_norm: 0.3205 | mfu: 52.9% | token_seen: 1.15e+09
+[step 2190 / 3814] loss: 3.0278 | throughput: 182240.5 tokens/s | grad_norm: 0.3384 | mfu: 53.1% | token_seen: 1.15e+09
+[step 2195 / 3814] loss: 3.0982 | throughput: 176801.3 tokens/s | grad_norm: 0.6323 | mfu: 51.5% | token_seen: 1.15e+09
+[step 2200 / 3814] running_loss: 3.0812 | val_loss: 3.2703 | num_eval_tokens: 10485760 | hellaswag: 0.2941 | obqa: 0.2860 | arc_easy: 0.4188 | arc_challenge: 0.2560
+[step 2200 / 3814] loss: 3.0592 | throughput: 182979.0 tokens/s | grad_norm: 0.3670 | mfu: 53.3% | token_seen: 1.15e+09
+[step 2205 / 3814] loss: 3.1152 | throughput: 180382.7 tokens/s | grad_norm: 0.3018 | mfu: 52.6% | token_seen: 1.16e+09
+[step 2210 / 3814] loss: 3.1520 | throughput: 181215.9 tokens/s | grad_norm: 0.2956 | mfu: 52.8% | token_seen: 1.16e+09
+[step 2215 / 3814] loss: 3.0276 | throughput: 181065.9 tokens/s | grad_norm: 0.2990 | mfu: 52.8% | token_seen: 1.16e+09
+[step 2220 / 3814] loss: 2.9579 | throughput: 182499.3 tokens/s | grad_norm: 0.2797 | mfu: 53.2% | token_seen: 1.16e+09
+[step 2225 / 3814] loss: 3.1407 | throughput: 182037.3 tokens/s | grad_norm: 0.2851 | mfu: 53.0% | token_seen: 1.17e+09
+[step 2230 / 3814] loss: 3.0463 | throughput: 183190.5 tokens/s | grad_norm: 0.3054 | mfu: 53.4% | token_seen: 1.17e+09
+[step 2235 / 3814] loss: 3.0850 | throughput: 184029.6 tokens/s | grad_norm: 0.3070 | mfu: 53.6% | token_seen: 1.17e+09
+[step 2240 / 3814] loss: 3.0487 | throughput: 183979.4 tokens/s | grad_norm: 0.3080 | mfu: 53.6% | token_seen: 1.17e+09
+[step 2245 / 3814] loss: 3.0458 | throughput: 181891.7 tokens/s | grad_norm: 0.3344 | mfu: 53.0% | token_seen: 1.18e+09
+[step 2250 / 3814] loss: 3.0583 | throughput: 182475.1 tokens/s | grad_norm: 0.3403 | mfu: 53.2% | token_seen: 1.18e+09
+[step 2255 / 3814] loss: 3.1345 | throughput: 183016.8 tokens/s | grad_norm: 0.3019 | mfu: 53.3% | token_seen: 1.18e+09
+[step 2260 / 3814] loss: 3.0694 | throughput: 182686.1 tokens/s | grad_norm: 0.2807 | mfu: 53.2% | token_seen: 1.18e+09
+[step 2265 / 3814] loss: 3.0637 | throughput: 180429.3 tokens/s | grad_norm: 0.2793 | mfu: 52.6% | token_seen: 1.19e+09
+[step 2270 / 3814] loss: 2.9724 | throughput: 184496.3 tokens/s | grad_norm: 0.2961 | mfu: 53.8% | token_seen: 1.19e+09
+[step 2275 / 3814] loss: 3.0283 | throughput: 183126.6 tokens/s | grad_norm: 0.3062 | mfu: 53.4% | token_seen: 1.19e+09
+[step 2280 / 3814] loss: 2.9699 | throughput: 183485.5 tokens/s | grad_norm: 0.2817 | mfu: 53.5% | token_seen: 1.20e+09
+[step 2285 / 3814] loss: 3.0130 | throughput: 180701.3 tokens/s | grad_norm: 0.2944 | mfu: 52.6% | token_seen: 1.20e+09
+[step 2290 / 3814] loss: 3.0725 | throughput: 182115.4 tokens/s | grad_norm: 0.3018 | mfu: 53.1% | token_seen: 1.20e+09
+[step 2295 / 3814] loss: 3.0960 | throughput: 177760.8 tokens/s | grad_norm: 0.2963 | mfu: 51.8% | token_seen: 1.20e+09
+[step 2300 / 3814] running_loss: 3.0699 | val_loss: 3.2621 | num_eval_tokens: 10485760 | hellaswag: 0.2920 | obqa: 0.2900 | arc_easy: 0.4474 | arc_challenge: 0.2611
+[step 2300 / 3814] loss: 3.0096 | throughput: 175740.6 tokens/s | grad_norm: 0.3343 | mfu: 51.2% | token_seen: 1.21e+09
+[step 2305 / 3814] loss: 3.0669 | throughput: 184312.1 tokens/s | grad_norm: 0.3253 | mfu: 53.7% | token_seen: 1.21e+09
+[step 2310 / 3814] loss: 3.0067 | throughput: 183939.9 tokens/s | grad_norm: 0.2988 | mfu: 53.6% | token_seen: 1.21e+09
+[step 2315 / 3814] loss: 3.0526 | throughput: 184157.9 tokens/s | grad_norm: 0.2707 | mfu: 53.7% | token_seen: 1.21e+09
+[step 2320 / 3814] loss: 3.0823 | throughput: 181053.1 tokens/s | grad_norm: 0.2915 | mfu: 52.7% | token_seen: 1.22e+09
+[step 2325 / 3814] loss: 3.0491 | throughput: 181049.7 tokens/s | grad_norm: 0.2770 | mfu: 52.7% | token_seen: 1.22e+09
+[step 2330 / 3814] loss: 3.0025 | throughput: 184163.1 tokens/s | grad_norm: 0.3126 | mfu: 53.7% | token_seen: 1.22e+09
+[step 2335 / 3814] loss: 3.0313 | throughput: 179095.7 tokens/s | grad_norm: 0.2954 | mfu: 52.2% | token_seen: 1.22e+09
+[step 2340 / 3814] loss: 3.0002 | throughput: 184562.1 tokens/s | grad_norm: 0.3101 | mfu: 53.8% | token_seen: 1.23e+09
+[step 2345 / 3814] loss: 3.0185 | throughput: 184103.9 tokens/s | grad_norm: 0.3232 | mfu: 53.6% | token_seen: 1.23e+09
+[step 2350 / 3814] loss: 3.0759 | throughput: 181774.9 tokens/s | grad_norm: 0.3073 | mfu: 53.0% | token_seen: 1.23e+09
+[step 2355 / 3814] loss: 3.0368 | throughput: 181747.3 tokens/s | grad_norm: 0.3162 | mfu: 53.0% | token_seen: 1.23e+09
+[step 2360 / 3814] loss: 2.9302 | throughput: 181047.1 tokens/s | grad_norm: 0.3055 | mfu: 52.7% | token_seen: 1.24e+09
+[step 2365 / 3814] loss: 3.1169 | throughput: 180424.0 tokens/s | grad_norm: 0.3057 | mfu: 52.6% | token_seen: 1.24e+09
+[step 2370 / 3814] loss: 3.0843 | throughput: 183914.4 tokens/s | grad_norm: 0.3337 | mfu: 53.6% | token_seen: 1.24e+09
+[step 2375 / 3814] loss: 3.0501 | throughput: 182982.7 tokens/s | grad_norm: 0.3089 | mfu: 53.3% | token_seen: 1.25e+09
+[step 2380 / 3814] loss: 3.0552 | throughput: 182571.8 tokens/s | grad_norm: 0.3116 | mfu: 53.2% | token_seen: 1.25e+09
+[step 2385 / 3814] loss: 3.0220 | throughput: 182524.1 tokens/s | grad_norm: 0.3203 | mfu: 53.2% | token_seen: 1.25e+09
+[step 2390 / 3814] loss: 3.0213 | throughput: 182646.2 tokens/s | grad_norm: 0.3025 | mfu: 53.2% | token_seen: 1.25e+09
+[step 2395 / 3814] loss: 3.0409 | throughput: 180739.4 tokens/s | grad_norm: 0.3044 | mfu: 52.7% | token_seen: 1.26e+09
+[step 2400 / 3814] running_loss: 3.0587 | val_loss: 3.2547 | num_eval_tokens: 10485760 | hellaswag: 0.2970 | obqa: 0.2900 | arc_easy: 0.4268 | arc_challenge: 0.2611
+[step 2400 / 3814] loss: 3.1057 | throughput: 184777.0 tokens/s | grad_norm: 0.2566 | mfu: 53.8% | token_seen: 1.26e+09
+[step 2405 / 3814] loss: 3.0252 | throughput: 183957.9 tokens/s | grad_norm: 0.2897 | mfu: 53.6% | token_seen: 1.26e+09
+[step 2410 / 3814] loss: 3.0413 | throughput: 182846.3 tokens/s | grad_norm: 0.3037 | mfu: 53.3% | token_seen: 1.26e+09
+[step 2415 / 3814] loss: 3.0015 | throughput: 180937.1 tokens/s | grad_norm: 0.3150 | mfu: 52.7% | token_seen: 1.27e+09
+[step 2420 / 3814] loss: 2.9886 | throughput: 175117.0 tokens/s | grad_norm: 0.3085 | mfu: 51.0% | token_seen: 1.27e+09
+[step 2425 / 3814] loss: 3.1292 | throughput: 183092.7 tokens/s | grad_norm: 0.2779 | mfu: 53.3% | token_seen: 1.27e+09
+[step 2430 / 3814] loss: 3.0836 | throughput: 182853.8 tokens/s | grad_norm: 0.2926 | mfu: 53.3% | token_seen: 1.27e+09
+[step 2435 / 3814] loss: 3.0376 | throughput: 183751.9 tokens/s | grad_norm: 0.2961 | mfu: 53.5% | token_seen: 1.28e+09
+[step 2440 / 3814] loss: 2.9299 | throughput: 185037.6 tokens/s | grad_norm: 0.2883 | mfu: 53.9% | token_seen: 1.28e+09
+[step 2445 / 3814] loss: 3.0271 | throughput: 184231.5 tokens/s | grad_norm: 0.2817 | mfu: 53.7% | token_seen: 1.28e+09
+[step 2450 / 3814] loss: 3.1094 | throughput: 183016.7 tokens/s | grad_norm: 0.2951 | mfu: 53.3% | token_seen: 1.28e+09
+[step 2455 / 3814] loss: 3.0145 | throughput: 179414.6 tokens/s | grad_norm: 0.2950 | mfu: 52.3% | token_seen: 1.29e+09
+[step 2460 / 3814] loss: 3.0509 | throughput: 181112.1 tokens/s | grad_norm: 0.3057 | mfu: 52.8% | token_seen: 1.29e+09
+[step 2465 / 3814] loss: 2.9971 | throughput: 179628.3 tokens/s | grad_norm: 0.2918 | mfu: 52.3% | token_seen: 1.29e+09
+[step 2470 / 3814] loss: 2.9812 | throughput: 183887.1 tokens/s | grad_norm: 0.2813 | mfu: 53.6% | token_seen: 1.29e+09
+[step 2475 / 3814] loss: 3.0203 | throughput: 183608.4 tokens/s | grad_norm: 0.3284 | mfu: 53.5% | token_seen: 1.30e+09
+[step 2480 / 3814] loss: 2.9580 | throughput: 178530.3 tokens/s | grad_norm: 0.3053 | mfu: 52.0% | token_seen: 1.30e+09
+[step 2485 / 3814] loss: 3.0146 | throughput: 179384.6 tokens/s | grad_norm: 0.3566 | mfu: 52.3% | token_seen: 1.30e+09
+[step 2490 / 3814] loss: 3.0209 | throughput: 184652.5 tokens/s | grad_norm: 0.2727 | mfu: 53.8% | token_seen: 1.31e+09
+[step 2495 / 3814] loss: 3.0516 | throughput: 182031.6 tokens/s | grad_norm: 0.2925 | mfu: 53.0% | token_seen: 1.31e+09
+[step 2500 / 3814] running_loss: 3.0368 | val_loss: 3.2489 | num_eval_tokens: 10485760 | hellaswag: 0.2942 | obqa: 0.2900 | arc_easy: 0.4339 | arc_challenge: 0.2619
+[step 2500 / 3814] loss: 2.9897 | throughput: 181007.0 tokens/s | grad_norm: 0.2877 | mfu: 52.7% | token_seen: 1.31e+09
+[step 2505 / 3814] loss: 3.0452 | throughput: 180953.8 tokens/s | grad_norm: 0.2862 | mfu: 52.7% | token_seen: 1.31e+09
+[step 2510 / 3814] loss: 2.9535 | throughput: 184754.4 tokens/s | grad_norm: 0.3049 | mfu: 53.8% | token_seen: 1.32e+09
+[step 2515 / 3814] loss: 3.0580 | throughput: 182362.1 tokens/s | grad_norm: 0.3116 | mfu: 53.1% | token_seen: 1.32e+09
+[step 2520 / 3814] loss: 3.0366 | throughput: 184264.5 tokens/s | grad_norm: 0.2930 | mfu: 53.7% | token_seen: 1.32e+09
+[step 2525 / 3814] loss: 3.0595 | throughput: 182990.7 tokens/s | grad_norm: 0.2877 | mfu: 53.3% | token_seen: 1.32e+09
+[step 2530 / 3814] loss: 3.0610 | throughput: 174812.4 tokens/s | grad_norm: 0.2908 | mfu: 50.9% | token_seen: 1.33e+09
+[step 2535 / 3814] loss: 3.0255 | throughput: 183166.1 tokens/s | grad_norm: 0.2634 | mfu: 53.4% | token_seen: 1.33e+09
+[step 2540 / 3814] loss: 3.0288 | throughput: 183625.8 tokens/s | grad_norm: 0.2899 | mfu: 53.5% | token_seen: 1.33e+09
+[step 2545 / 3814] loss: 3.0399 | throughput: 182055.9 tokens/s | grad_norm: 0.2999 | mfu: 53.0% | token_seen: 1.33e+09
+[step 2550 / 3814] loss: 3.0538 | throughput: 182734.1 tokens/s | grad_norm: 0.2817 | mfu: 53.2% | token_seen: 1.34e+09
+[step 2555 / 3814] loss: 2.9717 | throughput: 184421.4 tokens/s | grad_norm: 0.3010 | mfu: 53.7% | token_seen: 1.34e+09
+[step 2560 / 3814] loss: 2.9865 | throughput: 184020.4 tokens/s | grad_norm: 0.3017 | mfu: 53.6% | token_seen: 1.34e+09
+[step 2565 / 3814] loss: 3.0537 | throughput: 179916.0 tokens/s | grad_norm: 0.3455 | mfu: 52.4% | token_seen: 1.34e+09
+[step 2570 / 3814] loss: 3.0695 | throughput: 181947.0 tokens/s | grad_norm: 0.2804 | mfu: 53.0% | token_seen: 1.35e+09
+[step 2575 / 3814] loss: 3.0038 | throughput: 182382.3 tokens/s | grad_norm: 0.2902 | mfu: 53.1% | token_seen: 1.35e+09
+[step 2580 / 3814] loss: 3.0690 | throughput: 181876.7 tokens/s | grad_norm: 0.3273 | mfu: 53.0% | token_seen: 1.35e+09
+[step 2585 / 3814] loss: 2.9683 | throughput: 180383.4 tokens/s | grad_norm: 0.3073 | mfu: 52.6% | token_seen: 1.36e+09
+[step 2590 / 3814] loss: 3.0445 | throughput: 177015.1 tokens/s | grad_norm: 0.2883 | mfu: 51.6% | token_seen: 1.36e+09
+[step 2595 / 3814] loss: 3.0414 | throughput: 180793.1 tokens/s | grad_norm: 0.2922 | mfu: 52.7% | token_seen: 1.36e+09
+[step 2600 / 3814] running_loss: 3.0259 | val_loss: 3.2433 | num_eval_tokens: 10485760 | hellaswag: 0.2937 | obqa: 0.2740 | arc_easy: 0.4402 | arc_challenge: 0.2602
+[step 2600 / 3814] loss: 3.0481 | throughput: 181931.3 tokens/s | grad_norm: 0.2655 | mfu: 53.0% | token_seen: 1.36e+09
+[step 2605 / 3814] loss: 3.0531 | throughput: 179864.8 tokens/s | grad_norm: 0.3099 | mfu: 52.4% | token_seen: 1.37e+09
+[step 2610 / 3814] loss: 3.0582 | throughput: 184847.0 tokens/s | grad_norm: 0.2840 | mfu: 53.9% | token_seen: 1.37e+09
+[step 2615 / 3814] loss: 3.0026 | throughput: 183433.7 tokens/s | grad_norm: 0.2956 | mfu: 53.4% | token_seen: 1.37e+09
+[step 2620 / 3814] loss: 3.0101 | throughput: 180297.3 tokens/s | grad_norm: 0.3071 | mfu: 52.5% | token_seen: 1.37e+09
+[step 2625 / 3814] loss: 3.0330 | throughput: 178452.3 tokens/s | grad_norm: 0.2806 | mfu: 52.0% | token_seen: 1.38e+09
+[step 2630 / 3814] loss: 3.0428 | throughput: 184368.7 tokens/s | grad_norm: 0.3048 | mfu: 53.7% | token_seen: 1.38e+09
+[step 2635 / 3814] loss: 2.9684 | throughput: 180970.7 tokens/s | grad_norm: 0.3190 | mfu: 52.7% | token_seen: 1.38e+09
+[step 2640 / 3814] loss: 2.9490 | throughput: 184019.5 tokens/s | grad_norm: 0.2878 | mfu: 53.6% | token_seen: 1.38e+09
+[step 2645 / 3814] loss: 3.0309 | throughput: 181941.1 tokens/s | grad_norm: 0.2909 | mfu: 53.0% | token_seen: 1.39e+09
+[step 2650 / 3814] loss: 3.0125 | throughput: 179470.0 tokens/s | grad_norm: 0.2754 | mfu: 52.3% | token_seen: 1.39e+09
+[step 2655 / 3814] loss: 2.9679 | throughput: 180478.1 tokens/s | grad_norm: 0.3126 | mfu: 52.6% | token_seen: 1.39e+09
+[step 2660 / 3814] loss: 3.0777 | throughput: 181482.2 tokens/s | grad_norm: 0.3088 | mfu: 52.9% | token_seen: 1.39e+09
+[step 2665 / 3814] loss: 3.0467 | throughput: 184660.3 tokens/s | grad_norm: 0.2936 | mfu: 53.8% | token_seen: 1.40e+09
+[step 2670 / 3814] loss: 3.0346 | throughput: 183221.0 tokens/s | grad_norm: 0.3198 | mfu: 53.4% | token_seen: 1.40e+09
+[step 2675 / 3814] loss: 3.0467 | throughput: 184871.2 tokens/s | grad_norm: 0.3046 | mfu: 53.9% | token_seen: 1.40e+09
+[step 2680 / 3814] loss: 2.9790 | throughput: 182503.1 tokens/s | grad_norm: 0.2798 | mfu: 53.2% | token_seen: 1.41e+09
+[step 2685 / 3814] loss: 3.0248 | throughput: 182971.6 tokens/s | grad_norm: 0.3249 | mfu: 53.3% | token_seen: 1.41e+09
+[step 2690 / 3814] loss: 2.9786 | throughput: 182057.2 tokens/s | grad_norm: 0.2775 | mfu: 53.0% | token_seen: 1.41e+09
+[step 2695 / 3814] loss: 2.9707 | throughput: 184122.5 tokens/s | grad_norm: 0.5369 | mfu: 53.6% | token_seen: 1.41e+09
+[step 2700 / 3814] running_loss: 3.0023 | val_loss: 3.2423 | num_eval_tokens: 10485760 | hellaswag: 0.2969 | obqa: 0.2880 | arc_easy: 0.4444 | arc_challenge: 0.2739
+[step 2700 / 3814] loss: 2.9695 | throughput: 182466.1 tokens/s | grad_norm: 0.2794 | mfu: 53.2% | token_seen: 1.42e+09
+[step 2705 / 3814] loss: 3.0234 | throughput: 185409.0 tokens/s | grad_norm: 0.2740 | mfu: 54.0% | token_seen: 1.42e+09
+[step 2710 / 3814] loss: 2.9804 | throughput: 184698.9 tokens/s | grad_norm: 0.2781 | mfu: 53.8% | token_seen: 1.42e+09
+[step 2715 / 3814] loss: 2.9619 | throughput: 181023.6 tokens/s | grad_norm: 0.2982 | mfu: 52.7% | token_seen: 1.42e+09
+[step 2720 / 3814] loss: 2.9095 | throughput: 183423.7 tokens/s | grad_norm: 0.3037 | mfu: 53.4% | token_seen: 1.43e+09
+[step 2725 / 3814] loss: 3.0011 | throughput: 182864.1 tokens/s | grad_norm: 0.2906 | mfu: 53.3% | token_seen: 1.43e+09
+[step 2730 / 3814] loss: 2.9818 | throughput: 184822.0 tokens/s | grad_norm: 0.3027 | mfu: 53.8% | token_seen: 1.43e+09
+[step 2735 / 3814] loss: 3.0292 | throughput: 182047.1 tokens/s | grad_norm: 0.2861 | mfu: 53.0% | token_seen: 1.43e+09
+[step 2740 / 3814] loss: 2.9896 | throughput: 176802.9 tokens/s | grad_norm: 0.2867 | mfu: 51.5% | token_seen: 1.44e+09
+[step 2745 / 3814] loss: 2.9878 | throughput: 181684.5 tokens/s | grad_norm: 0.2801 | mfu: 52.9% | token_seen: 1.44e+09
+[step 2750 / 3814] loss: 2.9647 | throughput: 178383.3 tokens/s | grad_norm: 0.2957 | mfu: 52.0% | token_seen: 1.44e+09
+[step 2755 / 3814] loss: 2.9757 | throughput: 183055.2 tokens/s | grad_norm: 0.2851 | mfu: 53.3% | token_seen: 1.44e+09
+[step 2760 / 3814] loss: 2.9686 | throughput: 181968.2 tokens/s | grad_norm: 0.2507 | mfu: 53.0% | token_seen: 1.45e+09
+[step 2765 / 3814] loss: 2.9787 | throughput: 185194.5 tokens/s | grad_norm: 0.2831 | mfu: 54.0% | token_seen: 1.45e+09
+[step 2770 / 3814] loss: 3.0463 | throughput: 180439.7 tokens/s | grad_norm: 0.3123 | mfu: 52.6% | token_seen: 1.45e+09
+[step 2775 / 3814] loss: 2.9749 | throughput: 179848.2 tokens/s | grad_norm: 0.2645 | mfu: 52.4% | token_seen: 1.45e+09
+[step 2780 / 3814] loss: 3.0335 | throughput: 178840.1 tokens/s | grad_norm: 0.2788 | mfu: 52.1% | token_seen: 1.46e+09
+[step 2785 / 3814] loss: 2.9862 | throughput: 181252.2 tokens/s | grad_norm: 0.2724 | mfu: 52.8% | token_seen: 1.46e+09
+[step 2790 / 3814] loss: 2.9806 | throughput: 181726.6 tokens/s | grad_norm: 0.2620 | mfu: 52.9% | token_seen: 1.46e+09
+[step 2795 / 3814] loss: 2.9667 | throughput: 181398.7 tokens/s | grad_norm: 0.2676 | mfu: 52.8% | token_seen: 1.47e+09
+[step 2800 / 3814] running_loss: 2.9943 | val_loss: 3.2334 | num_eval_tokens: 10485760 | hellaswag: 0.2964 | obqa: 0.2900 | arc_easy: 0.4411 | arc_challenge: 0.2560
+[step 2800 / 3814] loss: 2.9496 | throughput: 182948.2 tokens/s | grad_norm: 0.2897 | mfu: 53.3% | token_seen: 1.47e+09
+[step 2805 / 3814] loss: 2.9575 | throughput: 184337.7 tokens/s | grad_norm: 0.2567 | mfu: 53.7% | token_seen: 1.47e+09
+[step 2810 / 3814] loss: 3.0017 | throughput: 182936.1 tokens/s | grad_norm: 0.2971 | mfu: 53.3% | token_seen: 1.47e+09
+[step 2815 / 3814] loss: 2.9899 | throughput: 182886.0 tokens/s | grad_norm: 0.2940 | mfu: 53.3% | token_seen: 1.48e+09
+[step 2820 / 3814] loss: 3.0856 | throughput: 180688.7 tokens/s | grad_norm: 0.3214 | mfu: 52.6% | token_seen: 1.48e+09
+[step 2825 / 3814] loss: 2.9986 | throughput: 183622.8 tokens/s | grad_norm: 0.2887 | mfu: 53.5% | token_seen: 1.48e+09
+[step 2830 / 3814] loss: 2.9568 | throughput: 181837.6 tokens/s | grad_norm: 0.2817 | mfu: 53.0% | token_seen: 1.48e+09
+[step 2835 / 3814] loss: 3.0518 | throughput: 184071.4 tokens/s | grad_norm: 0.2728 | mfu: 53.6% | token_seen: 1.49e+09
+[step 2840 / 3814] loss: 2.9234 | throughput: 181299.2 tokens/s | grad_norm: 0.2750 | mfu: 52.8% | token_seen: 1.49e+09
+[step 2845 / 3814] loss: 2.9686 | throughput: 182917.9 tokens/s | grad_norm: 0.3119 | mfu: 53.3% | token_seen: 1.49e+09
+[step 2850 / 3814] loss: 2.9454 | throughput: 184594.0 tokens/s | grad_norm: 0.2952 | mfu: 53.8% | token_seen: 1.49e+09
+[step 2855 / 3814] loss: 2.9560 | throughput: 179896.2 tokens/s | grad_norm: 0.2680 | mfu: 52.4% | token_seen: 1.50e+09
+[step 2860 / 3814] loss: 2.9651 | throughput: 183035.5 tokens/s | grad_norm: 0.3049 | mfu: 53.3% | token_seen: 1.50e+09
+[step 2865 / 3814] loss: 3.0142 | throughput: 181097.0 tokens/s | grad_norm: 0.3180 | mfu: 52.8% | token_seen: 1.50e+09
+[step 2870 / 3814] loss: 3.0242 | throughput: 182165.8 tokens/s | grad_norm: 0.2751 | mfu: 53.1% | token_seen: 1.50e+09
+[step 2875 / 3814] loss: 3.0537 | throughput: 181917.8 tokens/s | grad_norm: 0.2672 | mfu: 53.0% | token_seen: 1.51e+09
+[step 2880 / 3814] loss: 2.9813 | throughput: 182614.9 tokens/s | grad_norm: 0.2689 | mfu: 53.2% | token_seen: 1.51e+09
+[step 2885 / 3814] loss: 2.9948 | throughput: 182850.3 tokens/s | grad_norm: 0.2890 | mfu: 53.3% | token_seen: 1.51e+09
+[step 2890 / 3814] loss: 2.9534 | throughput: 182445.9 tokens/s | grad_norm: 0.2888 | mfu: 53.2% | token_seen: 1.52e+09
+[step 2895 / 3814] loss: 3.0530 | throughput: 179865.6 tokens/s | grad_norm: 0.2908 | mfu: 52.4% | token_seen: 1.52e+09
+[step 2900 / 3814] running_loss: 2.9828 | val_loss: 3.2287 | num_eval_tokens: 10485760 | hellaswag: 0.2963 | obqa: 0.2940 | arc_easy: 0.4512 | arc_challenge: 0.2602
+[step 2900 / 3814] loss: 3.0366 | throughput: 181419.4 tokens/s | grad_norm: 0.2789 | mfu: 52.9% | token_seen: 1.52e+09
+[step 2905 / 3814] loss: 2.9969 | throughput: 183203.0 tokens/s | grad_norm: 0.2938 | mfu: 53.4% | token_seen: 1.52e+09
+[step 2910 / 3814] loss: 3.0317 | throughput: 181131.0 tokens/s | grad_norm: 0.2752 | mfu: 52.8% | token_seen: 1.53e+09
+[step 2915 / 3814] loss: 2.9479 | throughput: 184243.9 tokens/s | grad_norm: 0.2605 | mfu: 53.7% | token_seen: 1.53e+09
+[step 2920 / 3814] loss: 2.9943 | throughput: 183947.5 tokens/s | grad_norm: 0.2807 | mfu: 53.6% | token_seen: 1.53e+09
+[step 2925 / 3814] loss: 2.9817 | throughput: 180883.0 tokens/s | grad_norm: 0.2437 | mfu: 52.7% | token_seen: 1.53e+09
+[step 2930 / 3814] loss: 2.9732 | throughput: 182963.7 tokens/s | grad_norm: 0.2401 | mfu: 53.3% | token_seen: 1.54e+09
+[step 2935 / 3814] loss: 2.9987 | throughput: 180041.4 tokens/s | grad_norm: 0.2874 | mfu: 52.5% | token_seen: 1.54e+09
+[step 2940 / 3814] loss: 2.9580 | throughput: 177110.7 tokens/s | grad_norm: 0.3046 | mfu: 51.6% | token_seen: 1.54e+09
+[step 2945 / 3814] loss: 2.9891 | throughput: 179076.9 tokens/s | grad_norm: 0.2932 | mfu: 52.2% | token_seen: 1.54e+09
+[step 2950 / 3814] loss: 3.0176 | throughput: 180667.2 tokens/s | grad_norm: 0.2790 | mfu: 52.6% | token_seen: 1.55e+09
+[step 2955 / 3814] loss: 2.9399 | throughput: 182842.5 tokens/s | grad_norm: 0.2860 | mfu: 53.3% | token_seen: 1.55e+09
+[step 2960 / 3814] loss: 2.9465 | throughput: 182370.5 tokens/s | grad_norm: 0.2675 | mfu: 53.1% | token_seen: 1.55e+09
+[step 2965 / 3814] loss: 2.9475 | throughput: 181469.2 tokens/s | grad_norm: 0.2655 | mfu: 52.9% | token_seen: 1.55e+09
+[step 2970 / 3814] loss: 2.9375 | throughput: 181606.2 tokens/s | grad_norm: 0.3263 | mfu: 52.9% | token_seen: 1.56e+09
+[step 2975 / 3814] loss: 2.9468 | throughput: 183905.1 tokens/s | grad_norm: 0.2967 | mfu: 53.6% | token_seen: 1.56e+09
+[step 2980 / 3814] loss: 2.9152 | throughput: 181079.6 tokens/s | grad_norm: 0.2732 | mfu: 52.8% | token_seen: 1.56e+09
+[step 2985 / 3814] loss: 2.9669 | throughput: 179897.0 tokens/s | grad_norm: 0.2775 | mfu: 52.4% | token_seen: 1.56e+09
+[step 2990 / 3814] loss: 2.9190 | throughput: 179156.3 tokens/s | grad_norm: 0.2773 | mfu: 52.2% | token_seen: 1.57e+09
+[step 2995 / 3814] loss: 2.9287 | throughput: 180099.0 tokens/s | grad_norm: 0.2838 | mfu: 52.5% | token_seen: 1.57e+09
+[step 3000 / 3814] running_loss: 2.9664 | val_loss: 3.2291 | num_eval_tokens: 10485760 | hellaswag: 0.2990 | obqa: 0.3080 | arc_easy: 0.4339 | arc_challenge: 0.2619
+[step 3000 / 3814] loss: 2.9613 | throughput: 183791.7 tokens/s | grad_norm: 0.2696 | mfu: 53.5% | token_seen: 1.57e+09
+[step 3005 / 3814] loss: 2.9970 | throughput: 184366.1 tokens/s | grad_norm: 0.2728 | mfu: 53.7% | token_seen: 1.58e+09
+[step 3010 / 3814] loss: 2.9526 | throughput: 181135.6 tokens/s | grad_norm: 0.2900 | mfu: 52.8% | token_seen: 1.58e+09
+[step 3015 / 3814] loss: 2.9814 | throughput: 181750.6 tokens/s | grad_norm: 0.2711 | mfu: 53.0% | token_seen: 1.58e+09
+[step 3020 / 3814] loss: 2.9693 | throughput: 181481.2 tokens/s | grad_norm: 0.2588 | mfu: 52.9% | token_seen: 1.58e+09
+[step 3025 / 3814] loss: 2.9476 | throughput: 180045.8 tokens/s | grad_norm: 0.2260 | mfu: 52.5% | token_seen: 1.59e+09
+[step 3030 / 3814] loss: 2.9401 | throughput: 183693.1 tokens/s | grad_norm: 0.3011 | mfu: 53.5% | token_seen: 1.59e+09
+[step 3035 / 3814] loss: 2.8937 | throughput: 180224.9 tokens/s | grad_norm: 0.2489 | mfu: 52.5% | token_seen: 1.59e+09
+[step 3040 / 3814] loss: 2.9953 | throughput: 178309.1 tokens/s | grad_norm: 0.2848 | mfu: 51.9% | token_seen: 1.59e+09
+[step 3045 / 3814] loss: 2.9127 | throughput: 183385.3 tokens/s | grad_norm: 0.3006 | mfu: 53.4% | token_seen: 1.60e+09
+[step 3050 / 3814] loss: 2.9003 | throughput: 182200.8 tokens/s | grad_norm: 0.2471 | mfu: 53.1% | token_seen: 1.60e+09
+[step 3055 / 3814] loss: 2.9341 | throughput: 176993.3 tokens/s | grad_norm: 0.2563 | mfu: 51.6% | token_seen: 1.60e+09
+[step 3060 / 3814] loss: 2.8628 | throughput: 182469.5 tokens/s | grad_norm: 0.2960 | mfu: 53.2% | token_seen: 1.60e+09
+[step 3065 / 3814] loss: 2.9283 | throughput: 182204.6 tokens/s | grad_norm: 0.2281 | mfu: 53.1% | token_seen: 1.61e+09
+[step 3070 / 3814] loss: 2.9234 | throughput: 182176.0 tokens/s | grad_norm: 0.2422 | mfu: 53.1% | token_seen: 1.61e+09
+[step 3075 / 3814] loss: 2.9386 | throughput: 175816.9 tokens/s | grad_norm: 0.2256 | mfu: 51.2% | token_seen: 1.61e+09
+[step 3080 / 3814] loss: 2.9336 | throughput: 182176.9 tokens/s | grad_norm: 0.2036 | mfu: 53.1% | token_seen: 1.61e+09
+[step 3085 / 3814] loss: 2.9877 | throughput: 177876.5 tokens/s | grad_norm: 0.2302 | mfu: 51.8% | token_seen: 1.62e+09
+[step 3090 / 3814] loss: 2.8843 | throughput: 180765.4 tokens/s | grad_norm: 0.2087 | mfu: 52.7% | token_seen: 1.62e+09
+[step 3095 / 3814] loss: 2.9024 | throughput: 175366.8 tokens/s | grad_norm: 0.2037 | mfu: 51.1% | token_seen: 1.62e+09
+[step 3100 / 3814] running_loss: 2.9534 | val_loss: 3.2123 | num_eval_tokens: 10485760 | hellaswag: 0.2975 | obqa: 0.3020 | arc_easy: 0.4440 | arc_challenge: 0.2688
+[step 3100 / 3814] loss: 2.9345 | throughput: 176895.5 tokens/s | grad_norm: 0.2306 | mfu: 51.5% | token_seen: 1.63e+09
+[step 3105 / 3814] loss: 2.9536 | throughput: 180177.4 tokens/s | grad_norm: 0.2102 | mfu: 52.5% | token_seen: 1.63e+09
+[step 3110 / 3814] loss: 2.8987 | throughput: 180351.1 tokens/s | grad_norm: 0.1918 | mfu: 52.5% | token_seen: 1.63e+09
+[step 3115 / 3814] loss: 2.9252 | throughput: 179494.0 tokens/s | grad_norm: 0.1973 | mfu: 52.3% | token_seen: 1.63e+09
+[step 3120 / 3814] loss: 2.9582 | throughput: 179470.1 tokens/s | grad_norm: 0.1920 | mfu: 52.3% | token_seen: 1.64e+09
+[step 3125 / 3814] loss: 2.9475 | throughput: 181737.6 tokens/s | grad_norm: 0.1783 | mfu: 52.9% | token_seen: 1.64e+09
+[step 3130 / 3814] loss: 2.8748 | throughput: 173037.3 tokens/s | grad_norm: 0.2033 | mfu: 50.4% | token_seen: 1.64e+09
+[step 3135 / 3814] loss: 2.9574 | throughput: 181410.2 tokens/s | grad_norm: 0.2054 | mfu: 52.9% | token_seen: 1.64e+09
+[step 3140 / 3814] loss: 2.9123 | throughput: 183677.0 tokens/s | grad_norm: 0.1908 | mfu: 53.5% | token_seen: 1.65e+09
+[step 3145 / 3814] loss: 2.9126 | throughput: 182174.7 tokens/s | grad_norm: 0.1866 | mfu: 53.1% | token_seen: 1.65e+09
+[step 3150 / 3814] loss: 2.8546 | throughput: 176323.9 tokens/s | grad_norm: 0.2050 | mfu: 51.4% | token_seen: 1.65e+09
+[step 3155 / 3814] loss: 2.9479 | throughput: 177428.3 tokens/s | grad_norm: 0.1793 | mfu: 51.7% | token_seen: 1.65e+09
+[step 3160 / 3814] loss: 2.9114 | throughput: 183232.9 tokens/s | grad_norm: 0.1709 | mfu: 53.4% | token_seen: 1.66e+09
+[step 3165 / 3814] loss: 2.9091 | throughput: 181355.4 tokens/s | grad_norm: 0.2163 | mfu: 52.8% | token_seen: 1.66e+09
+[step 3170 / 3814] loss: 2.9083 | throughput: 181880.1 tokens/s | grad_norm: 0.1691 | mfu: 53.0% | token_seen: 1.66e+09
+[step 3175 / 3814] loss: 2.9363 | throughput: 176549.0 tokens/s | grad_norm: 0.1714 | mfu: 51.4% | token_seen: 1.66e+09
+[step 3180 / 3814] loss: 2.8580 | throughput: 180957.1 tokens/s | grad_norm: 0.1811 | mfu: 52.7% | token_seen: 1.67e+09
+[step 3185 / 3814] loss: 2.8983 | throughput: 177652.4 tokens/s | grad_norm: 0.2239 | mfu: 51.8% | token_seen: 1.67e+09
+[step 3190 / 3814] loss: 2.9406 | throughput: 176862.0 tokens/s | grad_norm: 0.1960 | mfu: 51.5% | token_seen: 1.67e+09
+[step 3195 / 3814] loss: 2.8745 | throughput: 181163.2 tokens/s | grad_norm: 0.1690 | mfu: 52.8% | token_seen: 1.68e+09
+[step 3200 / 3814] running_loss: 2.9218 | val_loss: 3.1889 | num_eval_tokens: 10485760 | hellaswag: 0.3014 | obqa: 0.2780 | arc_easy: 0.4461 | arc_challenge: 0.2713
+[step 3200 / 3814] loss: 2.8859 | throughput: 181792.6 tokens/s | grad_norm: 0.1572 | mfu: 53.0% | token_seen: 1.68e+09
+[step 3205 / 3814] loss: 2.8876 | throughput: 180953.1 tokens/s | grad_norm: 0.1780 | mfu: 52.7% | token_seen: 1.68e+09
+[step 3210 / 3814] loss: 2.9351 | throughput: 182055.7 tokens/s | grad_norm: 0.1769 | mfu: 53.0% | token_seen: 1.68e+09
+[step 3215 / 3814] loss: 2.9705 | throughput: 180894.1 tokens/s | grad_norm: 0.1802 | mfu: 52.7% | token_seen: 1.69e+09
+[step 3220 / 3814] loss: 2.9638 | throughput: 183019.7 tokens/s | grad_norm: 0.1703 | mfu: 53.3% | token_seen: 1.69e+09
+[step 3225 / 3814] loss: 2.9393 | throughput: 180951.7 tokens/s | grad_norm: 0.1988 | mfu: 52.7% | token_seen: 1.69e+09
+[step 3230 / 3814] loss: 2.8785 | throughput: 181048.2 tokens/s | grad_norm: 0.1696 | mfu: 52.7% | token_seen: 1.69e+09
+[step 3235 / 3814] loss: 2.8981 | throughput: 180610.1 tokens/s | grad_norm: 0.1681 | mfu: 52.6% | token_seen: 1.70e+09
+[step 3240 / 3814] loss: 2.8732 | throughput: 179055.9 tokens/s | grad_norm: 0.1646 | mfu: 52.2% | token_seen: 1.70e+09
+[step 3245 / 3814] loss: 2.8869 | throughput: 181112.4 tokens/s | grad_norm: 0.1659 | mfu: 52.8% | token_seen: 1.70e+09
+[step 3250 / 3814] loss: 2.9583 | throughput: 177012.5 tokens/s | grad_norm: 0.1552 | mfu: 51.6% | token_seen: 1.70e+09
+[step 3255 / 3814] loss: 2.9469 | throughput: 175965.5 tokens/s | grad_norm: 0.1665 | mfu: 51.3% | token_seen: 1.71e+09
+[step 3260 / 3814] loss: 2.8863 | throughput: 173446.2 tokens/s | grad_norm: 0.1662 | mfu: 50.5% | token_seen: 1.71e+09
+[step 3265 / 3814] loss: 2.8832 | throughput: 180083.7 tokens/s | grad_norm: 0.1604 | mfu: 52.5% | token_seen: 1.71e+09
+[step 3270 / 3814] loss: 2.9114 | throughput: 180779.2 tokens/s | grad_norm: 0.1641 | mfu: 52.7% | token_seen: 1.71e+09
+[step 3275 / 3814] loss: 2.9311 | throughput: 175458.3 tokens/s | grad_norm: 0.1563 | mfu: 51.1% | token_seen: 1.72e+09
+[step 3280 / 3814] loss: 2.9118 | throughput: 182544.6 tokens/s | grad_norm: 0.1636 | mfu: 53.2% | token_seen: 1.72e+09
+[step 3285 / 3814] loss: 2.8847 | throughput: 175596.9 tokens/s | grad_norm: 0.1572 | mfu: 51.2% | token_seen: 1.72e+09
+[step 3290 / 3814] loss: 2.9154 | throughput: 181409.2 tokens/s | grad_norm: 0.1570 | mfu: 52.9% | token_seen: 1.72e+09
+[step 3295 / 3814] loss: 2.8741 | throughput: 180125.2 tokens/s | grad_norm: 0.1557 | mfu: 52.5% | token_seen: 1.73e+09
+[step 3300 / 3814] running_loss: 2.8889 | val_loss: 3.1719 | num_eval_tokens: 10485760 | hellaswag: 0.3012 | obqa: 0.2960 | arc_easy: 0.4533 | arc_challenge: 0.2730
+[step 3300 / 3814] loss: 2.8987 | throughput: 179944.1 tokens/s | grad_norm: 0.1579 | mfu: 52.4% | token_seen: 1.73e+09
+[step 3305 / 3814] loss: 2.8416 | throughput: 180891.6 tokens/s | grad_norm: 0.1528 | mfu: 52.7% | token_seen: 1.73e+09
+[step 3310 / 3814] loss: 2.8445 | throughput: 179964.5 tokens/s | grad_norm: 0.1583 | mfu: 52.4% | token_seen: 1.74e+09
+[step 3315 / 3814] loss: 2.8553 | throughput: 178820.3 tokens/s | grad_norm: 0.1567 | mfu: 52.1% | token_seen: 1.74e+09
+[step 3320 / 3814] loss: 2.8459 | throughput: 173329.5 tokens/s | grad_norm: 0.1669 | mfu: 50.5% | token_seen: 1.74e+09
+[step 3325 / 3814] loss: 2.8454 | throughput: 183138.0 tokens/s | grad_norm: 0.1664 | mfu: 53.4% | token_seen: 1.74e+09
+[step 3330 / 3814] loss: 2.8957 | throughput: 178258.1 tokens/s | grad_norm: 0.1547 | mfu: 51.9% | token_seen: 1.75e+09
+[step 3335 / 3814] loss: 2.9116 | throughput: 182661.1 tokens/s | grad_norm: 0.1496 | mfu: 53.2% | token_seen: 1.75e+09
+[step 3340 / 3814] loss: 2.9368 | throughput: 182280.2 tokens/s | grad_norm: 0.1761 | mfu: 53.1% | token_seen: 1.75e+09
+[step 3345 / 3814] loss: 2.9499 | throughput: 184481.3 tokens/s | grad_norm: 0.1477 | mfu: 53.7% | token_seen: 1.75e+09
+[step 3350 / 3814] loss: 2.8925 | throughput: 180177.2 tokens/s | grad_norm: 0.1617 | mfu: 52.5% | token_seen: 1.76e+09
+[step 3355 / 3814] loss: 2.8502 | throughput: 182153.3 tokens/s | grad_norm: 0.1567 | mfu: 53.1% | token_seen: 1.76e+09
+[step 3360 / 3814] loss: 2.9344 | throughput: 181866.9 tokens/s | grad_norm: 0.1645 | mfu: 53.0% | token_seen: 1.76e+09
+[step 3365 / 3814] loss: 2.8029 | throughput: 175177.0 tokens/s | grad_norm: 0.1508 | mfu: 51.0% | token_seen: 1.76e+09
+[step 3370 / 3814] loss: 2.9209 | throughput: 177239.3 tokens/s | grad_norm: 0.1768 | mfu: 51.6% | token_seen: 1.77e+09
+[step 3375 / 3814] loss: 2.8718 | throughput: 178061.7 tokens/s | grad_norm: 0.1527 | mfu: 51.9% | token_seen: 1.77e+09
+[step 3380 / 3814] loss: 2.9461 | throughput: 177517.2 tokens/s | grad_norm: 0.1591 | mfu: 51.7% | token_seen: 1.77e+09
+[step 3385 / 3814] loss: 2.8353 | throughput: 183110.1 tokens/s | grad_norm: 0.1582 | mfu: 53.3% | token_seen: 1.77e+09
+[step 3390 / 3814] loss: 2.8692 | throughput: 182346.6 tokens/s | grad_norm: 0.1556 | mfu: 53.1% | token_seen: 1.78e+09
+[step 3395 / 3814] loss: 2.8743 | throughput: 175433.8 tokens/s | grad_norm: 0.1775 | mfu: 51.1% | token_seen: 1.78e+09
+[step 3400 / 3814] running_loss: 2.8687 | val_loss: 3.1606 | num_eval_tokens: 10485760 | hellaswag: 0.3029 | obqa: 0.2980 | arc_easy: 0.4537 | arc_challenge: 0.2705
+[step 3400 / 3814] loss: 2.9330 | throughput: 179376.4 tokens/s | grad_norm: 0.1673 | mfu: 52.3% | token_seen: 1.78e+09
+[step 3405 / 3814] loss: 2.8870 | throughput: 178999.6 tokens/s | grad_norm: 0.1459 | mfu: 52.2% | token_seen: 1.79e+09
+[step 3410 / 3814] loss: 2.8599 | throughput: 180434.1 tokens/s | grad_norm: 0.1438 | mfu: 52.6% | token_seen: 1.79e+09
+[step 3415 / 3814] loss: 2.8674 | throughput: 181108.8 tokens/s | grad_norm: 0.1509 | mfu: 52.8% | token_seen: 1.79e+09
+[step 3420 / 3814] loss: 2.8910 | throughput: 182041.6 tokens/s | grad_norm: 0.1698 | mfu: 53.0% | token_seen: 1.79e+09
+[step 3425 / 3814] loss: 2.8411 | throughput: 184345.0 tokens/s | grad_norm: 0.1587 | mfu: 53.7% | token_seen: 1.80e+09
+[step 3430 / 3814] loss: 2.7534 | throughput: 183592.8 tokens/s | grad_norm: 0.1432 | mfu: 53.5% | token_seen: 1.80e+09
+[step 3435 / 3814] loss: 2.8747 | throughput: 173307.8 tokens/s | grad_norm: 0.1494 | mfu: 50.5% | token_seen: 1.80e+09
+[step 3440 / 3814] loss: 2.8876 | throughput: 180896.8 tokens/s | grad_norm: 0.1611 | mfu: 52.7% | token_seen: 1.80e+09
+[step 3445 / 3814] loss: 2.8930 | throughput: 184042.6 tokens/s | grad_norm: 0.1550 | mfu: 53.6% | token_seen: 1.81e+09
+[step 3450 / 3814] loss: 2.8371 | throughput: 180143.3 tokens/s | grad_norm: 0.1516 | mfu: 52.5% | token_seen: 1.81e+09
+[step 3455 / 3814] loss: 2.8821 | throughput: 179271.8 tokens/s | grad_norm: 0.1678 | mfu: 52.2% | token_seen: 1.81e+09
+[step 3460 / 3814] loss: 2.7942 | throughput: 181405.2 tokens/s | grad_norm: 0.1547 | mfu: 52.9% | token_seen: 1.81e+09
+[step 3465 / 3814] loss: 2.8360 | throughput: 180426.6 tokens/s | grad_norm: 0.1546 | mfu: 52.6% | token_seen: 1.82e+09
+[step 3470 / 3814] loss: 2.7974 | throughput: 179516.3 tokens/s | grad_norm: 0.1490 | mfu: 52.3% | token_seen: 1.82e+09
+[step 3475 / 3814] loss: 2.8267 | throughput: 182406.5 tokens/s | grad_norm: 0.1568 | mfu: 53.1% | token_seen: 1.82e+09
+[step 3480 / 3814] loss: 2.8160 | throughput: 176094.9 tokens/s | grad_norm: 0.1448 | mfu: 51.3% | token_seen: 1.82e+09
+[step 3485 / 3814] loss: 2.8598 | throughput: 183574.7 tokens/s | grad_norm: 0.1478 | mfu: 53.5% | token_seen: 1.83e+09
+[step 3490 / 3814] loss: 2.8573 | throughput: 180311.3 tokens/s | grad_norm: 0.1603 | mfu: 52.5% | token_seen: 1.83e+09
+[step 3495 / 3814] loss: 2.7280 | throughput: 180153.0 tokens/s | grad_norm: 0.1500 | mfu: 52.5% | token_seen: 1.83e+09
+[step 3500 / 3814] running_loss: 2.8336 | val_loss: 3.1512 | num_eval_tokens: 10485760 | hellaswag: 0.3060 | obqa: 0.2880 | arc_easy: 0.4562 | arc_challenge: 0.2824
+[step 3500 / 3814] loss: 2.7408 | throughput: 180392.7 tokens/s | grad_norm: 0.1514 | mfu: 52.6% | token_seen: 1.84e+09
+[step 3505 / 3814] loss: 2.8362 | throughput: 184231.1 tokens/s | grad_norm: 0.1395 | mfu: 53.7% | token_seen: 1.84e+09
+[step 3510 / 3814] loss: 2.7569 | throughput: 180026.2 tokens/s | grad_norm: 0.1397 | mfu: 52.4% | token_seen: 1.84e+09
+[step 3515 / 3814] loss: 2.7530 | throughput: 180818.7 tokens/s | grad_norm: 0.1526 | mfu: 52.7% | token_seen: 1.84e+09
+[step 3520 / 3814] loss: 2.7833 | throughput: 180932.7 tokens/s | grad_norm: 0.1467 | mfu: 52.7% | token_seen: 1.85e+09
+[step 3525 / 3814] loss: 2.7930 | throughput: 175668.6 tokens/s | grad_norm: 0.1466 | mfu: 51.2% | token_seen: 1.85e+09
+[step 3530 / 3814] loss: 2.8014 | throughput: 180274.7 tokens/s | grad_norm: 0.1412 | mfu: 52.5% | token_seen: 1.85e+09
+[step 3535 / 3814] loss: 2.8002 | throughput: 182350.4 tokens/s | grad_norm: 0.1511 | mfu: 53.1% | token_seen: 1.85e+09
+[step 3540 / 3814] loss: 2.7421 | throughput: 182770.8 tokens/s | grad_norm: 0.1495 | mfu: 53.2% | token_seen: 1.86e+09
+[step 3545 / 3814] loss: 2.8619 | throughput: 177203.0 tokens/s | grad_norm: 0.1467 | mfu: 51.6% | token_seen: 1.86e+09
+[step 3550 / 3814] loss: 2.7762 | throughput: 177974.4 tokens/s | grad_norm: 0.1469 | mfu: 51.9% | token_seen: 1.86e+09
+[step 3555 / 3814] loss: 2.7492 | throughput: 183311.3 tokens/s | grad_norm: 0.1451 | mfu: 53.4% | token_seen: 1.86e+09
+[step 3560 / 3814] loss: 2.8587 | throughput: 181344.0 tokens/s | grad_norm: 0.1575 | mfu: 52.8% | token_seen: 1.87e+09
+[step 3565 / 3814] loss: 2.8186 | throughput: 182339.6 tokens/s | grad_norm: 0.1528 | mfu: 53.1% | token_seen: 1.87e+09
+[step 3570 / 3814] loss: 2.7314 | throughput: 181548.4 tokens/s | grad_norm: 0.1474 | mfu: 52.9% | token_seen: 1.87e+09
+[step 3575 / 3814] loss: 2.8117 | throughput: 179389.8 tokens/s | grad_norm: 0.1553 | mfu: 52.3% | token_seen: 1.87e+09
+[step 3580 / 3814] loss: 2.8514 | throughput: 179186.3 tokens/s | grad_norm: 0.1440 | mfu: 52.2% | token_seen: 1.88e+09
+[step 3585 / 3814] loss: 2.8054 | throughput: 180954.4 tokens/s | grad_norm: 0.1466 | mfu: 52.7% | token_seen: 1.88e+09
+[step 3590 / 3814] loss: 2.7855 | throughput: 181852.9 tokens/s | grad_norm: 0.1525 | mfu: 53.0% | token_seen: 1.88e+09
+[step 3595 / 3814] loss: 2.7982 | throughput: 182244.1 tokens/s | grad_norm: 0.1542 | mfu: 53.1% | token_seen: 1.88e+09
+[step 3600 / 3814] running_loss: 2.8069 | val_loss: 3.1437 | num_eval_tokens: 10485760 | hellaswag: 0.3060 | obqa: 0.2900 | arc_easy: 0.4663 | arc_challenge: 0.2807
+[step 3600 / 3814] loss: 2.7792 | throughput: 181896.9 tokens/s | grad_norm: 0.1563 | mfu: 53.0% | token_seen: 1.89e+09
+[step 3605 / 3814] loss: 2.8531 | throughput: 183599.3 tokens/s | grad_norm: 0.1403 | mfu: 53.5% | token_seen: 1.89e+09
+[step 3610 / 3814] loss: 2.8357 | throughput: 182735.8 tokens/s | grad_norm: 0.1479 | mfu: 53.2% | token_seen: 1.89e+09
+[step 3615 / 3814] loss: 2.8226 | throughput: 181000.5 tokens/s | grad_norm: 0.1633 | mfu: 52.7% | token_seen: 1.90e+09
+[step 3620 / 3814] loss: 2.8563 | throughput: 183985.8 tokens/s | grad_norm: 0.1501 | mfu: 53.6% | token_seen: 1.90e+09
+[step 3625 / 3814] loss: 2.8289 | throughput: 180475.3 tokens/s | grad_norm: 0.1684 | mfu: 52.6% | token_seen: 1.90e+09
+[step 3630 / 3814] loss: 2.7966 | throughput: 181416.3 tokens/s | grad_norm: 0.1454 | mfu: 52.9% | token_seen: 1.90e+09
+[step 3635 / 3814] loss: 2.7877 | throughput: 180011.8 tokens/s | grad_norm: 0.1449 | mfu: 52.4% | token_seen: 1.91e+09
+[step 3640 / 3814] loss: 2.7671 | throughput: 182368.3 tokens/s | grad_norm: 0.1394 | mfu: 53.1% | token_seen: 1.91e+09
+[step 3645 / 3814] loss: 2.7839 | throughput: 179366.3 tokens/s | grad_norm: 0.1374 | mfu: 52.3% | token_seen: 1.91e+09
+[step 3650 / 3814] loss: 2.6981 | throughput: 180070.6 tokens/s | grad_norm: 0.1566 | mfu: 52.5% | token_seen: 1.91e+09
+[step 3655 / 3814] loss: 2.7491 | throughput: 180611.4 tokens/s | grad_norm: 0.1482 | mfu: 52.6% | token_seen: 1.92e+09
+[step 3660 / 3814] loss: 2.8282 | throughput: 179055.1 tokens/s | grad_norm: 0.1385 | mfu: 52.2% | token_seen: 1.92e+09
+[step 3665 / 3814] loss: 2.8006 | throughput: 177427.5 tokens/s | grad_norm: 0.1425 | mfu: 51.7% | token_seen: 1.92e+09
+[step 3670 / 3814] loss: 2.7543 | throughput: 182507.2 tokens/s | grad_norm: 0.1374 | mfu: 53.2% | token_seen: 1.92e+09
+[step 3675 / 3814] loss: 2.7250 | throughput: 182501.3 tokens/s | grad_norm: 0.1343 | mfu: 53.2% | token_seen: 1.93e+09
+[step 3680 / 3814] loss: 2.7515 | throughput: 183546.9 tokens/s | grad_norm: 0.1378 | mfu: 53.5% | token_seen: 1.93e+09
+[step 3685 / 3814] loss: 2.8124 | throughput: 181348.9 tokens/s | grad_norm: 0.1335 | mfu: 52.8% | token_seen: 1.93e+09
+[step 3690 / 3814] loss: 2.8519 | throughput: 182087.5 tokens/s | grad_norm: 0.1425 | mfu: 53.0% | token_seen: 1.93e+09
+[step 3695 / 3814] loss: 2.7113 | throughput: 184024.2 tokens/s | grad_norm: 0.1339 | mfu: 53.6% | token_seen: 1.94e+09
+[step 3700 / 3814] running_loss: 2.7814 | val_loss: 3.1386 | num_eval_tokens: 10485760 | hellaswag: 0.3070 | obqa: 0.2860 | arc_easy: 0.4651 | arc_challenge: 0.2901
+[step 3700 / 3814] loss: 2.8011 | throughput: 177877.6 tokens/s | grad_norm: 0.1415 | mfu: 51.8% | token_seen: 1.94e+09
+[step 3705 / 3814] loss: 2.8077 | throughput: 181720.2 tokens/s | grad_norm: 0.1370 | mfu: 52.9% | token_seen: 1.94e+09
+[step 3710 / 3814] loss: 2.7660 | throughput: 181455.4 tokens/s | grad_norm: 0.1353 | mfu: 52.9% | token_seen: 1.95e+09
+[step 3715 / 3814] loss: 2.7760 | throughput: 181284.5 tokens/s | grad_norm: 0.1428 | mfu: 52.8% | token_seen: 1.95e+09
+[step 3720 / 3814] loss: 2.7705 | throughput: 184651.9 tokens/s | grad_norm: 0.1310 | mfu: 53.8% | token_seen: 1.95e+09
+[step 3725 / 3814] loss: 2.7349 | throughput: 180379.2 tokens/s | grad_norm: 0.1569 | mfu: 52.6% | token_seen: 1.95e+09
+[step 3730 / 3814] loss: 2.7534 | throughput: 182680.8 tokens/s | grad_norm: 0.1311 | mfu: 53.2% | token_seen: 1.96e+09
+[step 3735 / 3814] loss: 2.7820 | throughput: 180136.2 tokens/s | grad_norm: 0.1352 | mfu: 52.5% | token_seen: 1.96e+09
+[step 3740 / 3814] loss: 2.7729 | throughput: 183384.5 tokens/s | grad_norm: 0.1316 | mfu: 53.4% | token_seen: 1.96e+09
+[step 3745 / 3814] loss: 2.7037 | throughput: 181437.5 tokens/s | grad_norm: 0.1286 | mfu: 52.9% | token_seen: 1.96e+09
+[step 3750 / 3814] loss: 2.7163 | throughput: 178475.0 tokens/s | grad_norm: 0.1498 | mfu: 52.0% | token_seen: 1.97e+09
+[step 3755 / 3814] loss: 2.7758 | throughput: 183230.2 tokens/s | grad_norm: 0.1266 | mfu: 53.4% | token_seen: 1.97e+09
+[step 3760 / 3814] loss: 2.6994 | throughput: 181911.7 tokens/s | grad_norm: 0.1296 | mfu: 53.0% | token_seen: 1.97e+09
+[step 3765 / 3814] loss: 2.7478 | throughput: 184474.9 tokens/s | grad_norm: 0.1345 | mfu: 53.7% | token_seen: 1.97e+09
+[step 3770 / 3814] loss: 2.7919 | throughput: 181418.9 tokens/s | grad_norm: 0.1354 | mfu: 52.9% | token_seen: 1.98e+09
+[step 3775 / 3814] loss: 2.7412 | throughput: 177904.0 tokens/s | grad_norm: 0.1348 | mfu: 51.8% | token_seen: 1.98e+09
+[step 3780 / 3814] loss: 2.7310 | throughput: 180729.2 tokens/s | grad_norm: 0.1371 | mfu: 52.7% | token_seen: 1.98e+09
+[step 3785 / 3814] loss: 2.7194 | throughput: 177812.9 tokens/s | grad_norm: 0.1355 | mfu: 51.8% | token_seen: 1.98e+09
+[step 3790 / 3814] loss: 2.6730 | throughput: 181097.8 tokens/s | grad_norm: 0.1307 | mfu: 52.8% | token_seen: 1.99e+09
+[step 3795 / 3814] loss: 2.7059 | throughput: 181879.0 tokens/s | grad_norm: 0.1392 | mfu: 53.0% | token_seen: 1.99e+09
+[step 3800 / 3814] running_loss: 2.7291 | val_loss: 3.1380 | num_eval_tokens: 10485760 | hellaswag: 0.3049 | obqa: 0.2940 | arc_easy: 0.4697 | arc_challenge: 0.2901
+[step 3800 / 3814] loss: 2.7023 | throughput: 184201.6 tokens/s | grad_norm: 0.1370 | mfu: 53.7% | token_seen: 1.99e+09
+[step 3805 / 3814] loss: 2.7046 | throughput: 181418.1 tokens/s | grad_norm: 0.1270 | mfu: 52.9% | token_seen: 1.99e+09
+[step 3810 / 3814] loss: 2.7337 | throughput: 182653.3 tokens/s | grad_norm: 0.1345 | mfu: 53.2% | token_seen: 2.00e+09
+[step 3814 / 3814] running_loss: 2.6718 | val_loss: 3.1388 | num_eval_tokens: 10485760 | hellaswag: 0.3060 | obqa: 0.2880 | arc_easy: 0.4722 | arc_challenge: 0.2875
+[step 3814 / 3814] loss: 2.6485 | throughput: 183988.1 tokens/s | grad_norm: 0.1382 | mfu: 53.6% | token_seen: 2.00e+09
+*** Training stats: ***
+  - Training time 3h 21m 29.67s
+  - Num tokens seen: 2.00e+09
+  - Peak VRAM usage: 11865.56 MB
+

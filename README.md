@@ -7,6 +7,13 @@
 
 > Modernizing Language Model with recent advancements in architecture, optimization, and training techniques.
 
+## Records
+
+| Date | Key optimizations | # Tokens | Throughput (toks/s) | Val. loss | HellaSwag | OpenBookQA | ARC-e | ARC-c |
+| :---: | --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| [v2 (2026-04-04_08-38-15)](./records/v2-2026-04-04_08-38-15/) | [Details](./records/v2-2026-04-04_08-38-15/) | 2B | 138k | 3.0862 | 31.10 | 29.60 | 47.73 | 28.50 |
+| [v1 (2026-03-31_07-00-01)](./records/v1-2026-03-31_07-00-01/) | [Details](./records/v1-2026-03-31_07-00-01/) | 2B | 183k | 3.1388 | 30.60 | 28.80 | 47.22 | 28.75 |
+
 ## Getting started
 
 ### Installation
