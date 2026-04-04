@@ -76,6 +76,12 @@ def _add_model_opts(parser: argparse.ArgumentParser) -> None:
         default=12,
     )
     group.add_argument(
+        "--num_kv_heads",
+        type=int,
+        help="Number of key/value heads for Grouped-Query Attention",
+        default=4,
+    )
+    group.add_argument(
         "--d_ff",
         type=int,
         help="Intermediate size of the feed-forward layers",
@@ -93,10 +99,35 @@ def _add_model_opts(parser: argparse.ArgumentParser) -> None:
         help="Whether to tie weights between input and output embeddings",
     )
     group.add_argument(
-        "--rope_theta",
+        "--rope_theta_full",
         type=float,
-        help="Theta value for RoPE",
-        default=10000.0,
+        help="Theta value for RoPE in full attention layers",
+        default=100_000.0,
+    )
+    group.add_argument(
+        "--rope_theta_sliding",
+        type=float,
+        help="Theta value for RoPE in sliding window attention layers",
+        default=10_000.0,
+    )
+    group.add_argument(
+        "--sliding_window_size",
+        type=int,
+        help="Sliding window size for attention",
+        default=512,
+    )
+    group.add_argument(
+        "--layer_types",
+        type=str,
+        nargs="+",
+        help="List of layer types (e.g., 'sliding,sliding,sliding,sliding,full'). It will be repeated to match num_layers.",
+        default=["sliding", "sliding", "sliding", "sliding", "full"],
+    )
+    group.add_argument(
+        "--partial_rotary_factor",
+        type=float,
+        help="Fraction of head dimensions to apply RoPE to (1.0 = all)",
+        default=1.0,
     )
     group.add_argument(
         "--attn_logit_softcapping",
@@ -109,6 +140,12 @@ def _add_model_opts(parser: argparse.ArgumentParser) -> None:
         type=float,
         help="Softcapping value for final logits",
         default=30.0,
+    )
+    group.add_argument(
+        "--rms_norm_eps",
+        type=float,
+        help="Epsilon value for RMS normalization. Use larger value (e.g., 1e-5) for training stability when using mixed precision training and smaller value (e.g., 1e-7) for better performance when using full precision training",
+        default=1e-5,
     )
 
 
@@ -243,8 +280,7 @@ def _add_common_training_opts(parser: argparse.ArgumentParser) -> None:
     group.add_argument(
         "--stable_steps",
         type=int,
-        help="Number of steps to maintain constant learning rate (for wsd decay only)",
-        default=15_000,
+        help="Number of steps to maintain constant learning rate (for wsd decay only). If not provided, the value will be inferred from --train_steps, --warup_steps and --decay_steps to make sure the learning rate will decay until min_lr at the end of training.",
     )
     group.add_argument(
         "--decay_steps",
@@ -320,6 +356,11 @@ def _add_common_training_opts(parser: argparse.ArgumentParser) -> None:
         type=int,
         help="Maximum number of saved checkpoints, when reached, the oldest checkpoints will be removed",
         default=10,
+    )
+    group.add_argument(
+        "--save_model_only",
+        action="store_true",
+        help="Only save the model weights, do not save optimizer and scheduler states.",
     )
     group.add_argument(
         "--max_grad_norm",

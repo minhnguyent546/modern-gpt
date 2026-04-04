@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import math
 import os
-from dataclasses import dataclass
-from typing import Callable
+from dataclasses import dataclass, field
+from typing import Callable, Literal
 
 import torch
 import torch.nn as nn
@@ -27,8 +27,37 @@ else:
     flash_attn_func = None
 
 
-def norm(x: Tensor) -> Tensor:
-    return Fun.rms_norm(x, (x.shape[-1],))
+@dataclass
+class ModernLMConfig:
+    vocab_size: int = 50257
+    seq_length: int = 1024
+    d_model: int = 768
+    num_layers: int = 12
+    num_heads: int = 12
+    num_kv_heads: int | None = None
+    d_ff: int = 2048  # use 8/3 * d_model to achive the same number of parameters compare to FFN when switching to SwiGLU
+    dropout: float = 0.0
+    tie_weights: bool = True
+    rope_theta_full: float = 100_000.0
+    rope_theta_sliding: float = 10_000.0
+    sliding_window_size: int = 512
+    layer_types: list[Literal["sliding", "full"]] = field(
+        default_factory=lambda: [
+            "sliding",
+            "sliding",
+            "sliding",
+            "sliding",
+            "full",
+        ]
+    )
+    partial_rotary_factor: float = 1.0  # TODO: implement partial RoPE later
+    attn_logit_softcapping: float | None = None
+    final_logit_softcapping: float | None = None
+    rms_norm_eps: float = 1e-5
+
+
+def norm(x: Tensor, eps: float = 1e-5) -> Tensor:
+    return Fun.rms_norm(x, (x.shape[-1],), eps=eps)
 
 
 def softcap(x: Tensor, cap: float) -> Tensor:
@@ -130,30 +159,47 @@ class CausalMultiHeadSelfAttention(nn.Module):
         num_heads: int,
         dropout: float,
         max_seq_length: int,
+        num_kv_heads: int | None = None,
         rope_theta: float = 10000.0,
         softcapping: float | None = None,
+        rms_norm_eps: float = 1e-5,
+        window_size: int = -1,
     ):
         super().__init__()
+        if num_kv_heads is None:
+            num_kv_heads = num_heads
+
         if not d_model % num_heads == 0:
             raise ValueError("d_model must be divisible by num_heads")
+        if num_kv_heads > num_heads:
+            raise ValueError("num_kv_heads must be less than or equal to num_heads")
+        if not num_heads % num_kv_heads == 0:
+            raise ValueError("num_heads must be divisible by num_kv_heads")
+
         self.d_model = d_model
         self.num_heads = num_heads
+        self.num_kv_heads = num_kv_heads
         self.head_dim = self.d_model // self.num_heads
+        self.num_queries_per_kv = self.num_heads // self.num_kv_heads
+
         self.attention_dropout = nn.Dropout(dropout)
         self.residual_dropout = nn.Dropout(dropout)
         self.use_flash_attn = USE_FLASH_ATTN
+        self.rms_norm_eps = rms_norm_eps
+        self.window_size = window_size
 
         self.softcapping = softcapping if softcapping is not None else 0.0
         self.flash_attn_func = flash_attn_func
         if self.use_flash_attn and self.flash_attn_func is None:
             raise RuntimeError("USE_FLASH_ATTN=1 but flash-attn3 kernel is not available")
 
-        self.w_q = nn.Linear(d_model, d_model, bias=False)
-        self.w_k = nn.Linear(d_model, d_model, bias=False)
-        self.w_v = nn.Linear(d_model, d_model, bias=False)
+        self.w_q = nn.Linear(d_model, self.num_heads * self.head_dim, bias=False)
+        self.w_k = nn.Linear(d_model, self.num_kv_heads * self.head_dim, bias=False)
+        self.w_v = nn.Linear(d_model, self.num_kv_heads * self.head_dim, bias=False)
 
-        self.rl_projection = nn.Linear(d_model, d_model, bias=False)
+        self.rl_projection = nn.Linear(self.num_heads * self.head_dim, d_model, bias=False)
 
+        # TODO: implement partial RoPE later
         self.rope = RotaryPositionalEmbeddings(
             self.head_dim, base_theta=rope_theta, max_seq_len=max_seq_length
         )
@@ -173,14 +219,14 @@ class CausalMultiHeadSelfAttention(nn.Module):
         k = self.w_k(x)
         v = self.w_v(x)
 
-        # Reshape to (batch_size, seq_length, num_heads, head_dim)
+        # Reshape to (batch_size, seq_length, num_heads/num_kv_heads, head_dim)
         q = q.view(batch_size, seq_length, self.num_heads, self.head_dim)
-        k = k.view(batch_size, seq_length, self.num_heads, self.head_dim)
-        v = v.view(batch_size, seq_length, self.num_heads, self.head_dim)
+        k = k.view(batch_size, seq_length, self.num_kv_heads, self.head_dim)
+        v = v.view(batch_size, seq_length, self.num_kv_heads, self.head_dim)
 
         # QK-Norm
-        q = norm(q)
-        k = norm(k)
+        q = norm(q, eps=self.rms_norm_eps)
+        k = norm(k, eps=self.rms_norm_eps)
 
         # Follow Qwen3/Gemma3 stype: applying norm and then RoPE
         cos, sin = self.rope(seq_length)
@@ -188,18 +234,31 @@ class CausalMultiHeadSelfAttention(nn.Module):
         k = apply_rotary_emb(k, cos=cos, sin=sin)
 
         if self.use_flash_attn and self.flash_attn_func is not None:
+            # FA3 natively supports GQA if shapes match (B, S, num_heads, D) and (B, S, num_kv_heads, D)
             # FA3 does not support dropout (https://github.com/Dao-AILab/flash-attention/issues/1377#issuecomment-2529622590)
+            window = (self.window_size, -1) if self.window_size > 0 else (-1, -1)
             y = self.flash_attn_func(
                 q,
                 k,
                 v,
                 causal=True,
+                window_size=window,
                 softcap=self.softcapping,
             )
-            # returned shape is (batch_size, seq_length, num_heads, head_dim), reshape back to (batch_size, seq_length, d_model)
-            y = y.reshape(batch_size, -1, self.d_model)
+            # returned shape is (batch_size, seq_length, num_heads, head_dim), reshape back to (batch_size, seq_length, num_heads * head_dim)
+            y = y.reshape(batch_size, -1, self.num_heads * self.head_dim)
         else:
+            # For standard PyTorch SDPA, we must manually repeat KV heads if num_kv_heads < num_heads
+            if self.num_kv_heads != self.num_heads:
+                k = torch.repeat_interleave(k, self.num_queries_per_kv, dim=2)
+                v = torch.repeat_interleave(v, self.num_queries_per_kv, dim=2)
+
             mask = self.get_buffer("causal_mask")[..., :seq_length, :seq_length]
+            if self.window_size > 0:
+                row_idx = torch.arange(seq_length, device=x.device).unsqueeze(1)
+                col_idx = torch.arange(seq_length, device=x.device).unsqueeze(0)
+                window_mask = col_idx >= (row_idx - self.window_size + 1)
+                mask = mask & window_mask.unsqueeze(0).unsqueeze(0)
 
             y = scaled_dot_product_attention(
                 q.transpose(1, 2),
@@ -209,8 +268,8 @@ class CausalMultiHeadSelfAttention(nn.Module):
                 dropout=self.attention_dropout,
                 softcapping=self.softcapping,
             )
-            # returned shape is (batch_size, num_heads, seq_length, head_dim), reshape back to (batch_size, seq_length, d_model)
-            y = y.transpose(1, 2).contiguous().view(batch_size, -1, self.d_model)
+            # returned shape is (batch_size, num_heads, seq_length, head_dim), reshape back to (batch_size, seq_length, num_heads * head_dim)
+            y = y.transpose(1, 2).contiguous().view(batch_size, -1, self.num_heads * self.head_dim)
 
         y = self.residual_dropout(self.rl_projection(y))
         return y
@@ -247,43 +306,53 @@ class SwiGLUFeedForward(nn.Module):
         return x
 
 
-@dataclass
-class ModernLMConfig:
-    vocab_size: int = 50257
-    seq_length: int = 1024
-    d_model: int = 768
-    num_layers: int = 12
-    num_heads: int = 12
-    d_ff: int = 2048  # use 8/3 * d_model to achive the same number of parameters compare to FFN when switching to SwiGLU
-    dropout: float = 0.0
-    eps: float = 1e-7
-    tie_weights: bool = True
-    rope_theta: float = 10000.0
-    attn_logit_softcapping: float | None = None
-    final_logit_softcapping: float | None = None
-
-
 class ModernLMDecoderBlock(nn.Module):
-    def __init__(self, config: ModernLMConfig):
+    def __init__(
+        self,
+        config: ModernLMConfig,
+        layer_type: Literal["sliding", "full"],
+        layer_idx: int = 0,
+    ):
         super().__init__()
+        self.layer_idx = layer_idx
+        self.rms_norm_eps = config.rms_norm_eps
+
+        self.window_size = -1 if layer_type == "full" else config.sliding_window_size
+        self.rope_theta = (
+            config.rope_theta_full if layer_type == "full" else config.rope_theta_sliding
+        )
+
         self.causal_self_attention = CausalMultiHeadSelfAttention(
-            config.d_model,
-            config.num_heads,
-            config.dropout,
-            config.seq_length,
-            rope_theta=config.rope_theta,
+            d_model=config.d_model,
+            num_heads=config.num_heads,
+            dropout=config.dropout,
+            max_seq_length=config.seq_length,
+            num_kv_heads=config.num_kv_heads,
+            rope_theta=self.rope_theta,
             softcapping=config.attn_logit_softcapping,
+            rms_norm_eps=config.rms_norm_eps,
+            window_size=self.window_size,
         )
         self.mlp = SwiGLUFeedForward(
-            config.d_model,
-            config.d_ff,
+            d_model=config.d_model,
+            d_ff=config.d_ff,
             dropout=config.dropout,
         )
 
     def forward(self, x: Tensor) -> Tensor:
-        """see: https://github.com/openai/gpt-2/blob/master/src/model.py#L123"""
-        x = x + self.causal_self_attention(norm(x))
-        x = x + self.mlp(norm(x))
+        """see: https://github.com/openai/gpt-2/blob/master/src/model.py#L123
+
+        LayerNorm Scaling (LNS) is applied here following:
+          Sun et al. (2025), "The Curse of Depth in Large Language Models" (NeurIPS 2025)
+            https://arxiv.org/abs/2502.05795
+
+        LNS scales the Pre-LN output by 1/sqrt(layer_idx + 1) to control variance growth
+        through depth, preventing deeper layers from becoming ineffective. This replaces
+        the GPT-2 style 1/sqrt(2N) residual scaling, which is incompatible with LNS.
+        """
+        lns_scale = 1.0 / math.sqrt(self.layer_idx + 1)
+        x = x + self.causal_self_attention(norm(x, eps=self.rms_norm_eps) * lns_scale)
+        x = x + self.mlp(norm(x, eps=self.rms_norm_eps) * lns_scale)
         return x
 
 
@@ -291,9 +360,21 @@ class ModernLM(nn.Module):
     def __init__(self, config: ModernLMConfig):
         super().__init__()
         self.config = config
+
+        if len(self.config.layer_types) > self.config.num_layers:
+            raise ValueError("Length of layer_types cannot be greater than num_layers")
+
+        if len(self.config.layer_types) < self.config.num_layers:
+            if self.config.num_layers % len(self.config.layer_types) != 0:
+                raise ValueError("num_layers must be divisible by layer_types")
+
+            repeats = self.config.num_layers // len(self.config.layer_types)
+            self.config.layer_types = self.config.layer_types * repeats
+
         self.token_embedding = nn.Embedding(self.config.vocab_size, self.config.d_model)
         self.decoder_blocks = nn.Sequential(*[
-            ModernLMDecoderBlock(self.config) for _ in range(self.config.num_layers)
+            ModernLMDecoderBlock(self.config, layer_type=self.config.layer_types[i], layer_idx=i)
+            for i in range(self.config.num_layers)
         ])
         self.lm_head = nn.Linear(self.config.d_model, self.config.vocab_size, bias=False)
 
@@ -302,7 +383,7 @@ class ModernLM(nn.Module):
     def forward(self, ids: Tensor) -> Tensor:
         token_embeddings = self.token_embedding(ids)
         x = self.decoder_blocks(token_embeddings)
-        x = norm(x)
+        x = norm(x, eps=self.config.rms_norm_eps)
         logits = self.lm_head(x)  # (batch_size, seq_length, vocab_size)
         if (
             self.config.final_logit_softcapping is not None
@@ -314,6 +395,8 @@ class ModernLM(nn.Module):
 
     def post_init(self) -> None:
         self._init_model_weights()
+        if self.config.tie_weights:
+            self.tie_weights()
 
     def tie_weights(self) -> None:
         if self.lm_head.weight.shape != self.token_embedding.weight.shape:
@@ -324,25 +407,72 @@ class ModernLM(nn.Module):
             )
         self.lm_head.weight = self.token_embedding.weight
 
-    def _init_model_weights(self, std: float = 0.02) -> None:
-        self.apply(lambda module: self._init_weights(module, std=std))
+    def _init_model_weights(self) -> None:
+        r"""Initialize weights using width-aware scaling and truncated normal.
 
-        # as in GPT-2 paper, weights of residual layers at initialization are scaled
-        # by a factor of 1/sqrt(N) where N is the number of residual layers,
-        # in this case N is equal to 2 * num_layers
-        scaling_factor = 1 / math.sqrt(2 * self.config.num_layers)
-        for param_name, param in self.named_parameters():
-            if param_name.endswith("rl_projection.weight"):
-                torch.nn.init.normal_(param, mean=0.0, std=std * scaling_factor)
+        This replaces the original GPT-2 style initialization (fixed std=0.02 with
+        1/sqrt(2N) residual scaling) with modern best practices:
 
-    def _init_weights(self, module, std: float = 0.02):
-        """ref: https://github.com/openai/gpt-2/blob/master/src/model.py#L50"""
-        if isinstance(module, nn.Linear):
-            torch.nn.init.normal_(module.weight, mean=0.0, std=std)
-            if module.bias is not None:
-                torch.nn.init.zeros_(module.bias)
-        elif isinstance(module, nn.Embedding):
-            torch.nn.init.normal_(module.weight, mean=0.0, std=std)
+        1. Width-aware std (1/sqrt(fan_in)):
+           - Yang et al. (2022), "Tensor Programs V: Tuning Large Neural Networks via
+             Zero-Shot Hyperparameter Transfer" (MuP)
+             https://arxiv.org/abs/2203.03466
+           - Lingle (2024), "A Large-Scale Exploration of mu-Transfer"
+             https://arxiv.org/abs/2406.10284
+           - Groeneveld et al. (2024), "OLMo: Accelerating the Science of Language Models"
+             https://arxiv.org/abs/2402.00838
+
+        2. FFN down projection uses 1/sqrt(d_ff) instead of 1/sqrt(d_model) to account
+           for the actual fan-in dimension (important when d_ff != 4*d_model, e.g. SwiGLU
+           with d_ff = 8/3 * d_model).
+
+        3. Truncated normal (\oplus 3\sigma) for stability, following OLMo's practice.
+
+        4. LayerNorm Scaling (LNS) replaces 1/sqrt(2N) residual scaling:
+           - Sun et al. (2025), "The Curse of Depth in Large Language Models" (NeurIPS 2025)
+            https://arxiv.org/abs/2502.05795
+           - LNS and residual scaling are incompatible; LNS is preferred for deep models.
+
+        Tied weights handling:
+           When config.tie_weights=True (default), post_init() calls tie_weights() AFTER
+           this method, which sets lm_head.weight = token_embedding.weight. This means
+           the lm_head's own initialization is discarded and both share the embedding's
+           tensor. We initialize both with std=1/sqrt(d_model) so the effective shared
+           init is consistent regardless of tie order. This is a compromise between
+           MuP's recommended embedding std=1.0 and lm_head std=1/d_model, consistent
+           with OLMo's "mitchell" init scheme.
+
+           If you untie weights, consider the full MuP split:
+             - token_embedding: std = 1.0
+             - lm_head: std = 1/d_model
+           Or Gemma's approach: scale embeddings by sqrt(d_model) in the forward pass.
+
+           References:
+           - Yao et al. (2025), "An Analysis for Reasoning Bias of Language Models with
+             Small Initialization"
+           - Team et al. (2024), "Gemma: Open Models Based on Gemini Research"
+             https://arxiv.org/abs/2403.08295
+        """
+        d_model = self.config.d_model
+        d_ff = self.config.d_ff
+        std = 1.0 / math.sqrt(d_model)
+        std_ffn_down = 1.0 / math.sqrt(d_ff)
+
+        def init_fn(module):
+            if isinstance(module, nn.Linear):
+                fan_in = module.weight.shape[1]
+                layer_std = std_ffn_down if fan_in == d_ff else std
+                torch.nn.init.trunc_normal_(
+                    module.weight, mean=0.0, std=layer_std, a=-3 * layer_std, b=3 * layer_std
+                )
+                if module.bias is not None:
+                    torch.nn.init.zeros_(module.bias)
+            elif isinstance(module, nn.Embedding):
+                torch.nn.init.trunc_normal_(
+                    module.weight, mean=0.0, std=std, a=-3 * std, b=3 * std
+                )
+
+        self.apply(init_fn)
 
     def estimate_flops_per_token(self) -> int:
         """Estimate FLOPs for a single forward + backward pass per token.
@@ -359,8 +489,7 @@ class ModernLM(nn.Module):
         """
         config = self.config
         head_dim = config.d_model // config.num_heads
-        # kv_dim = config.num_kv_heads * head_dim
-        kv_dim = config.d_model
+        kv_dim = (config.num_kv_heads or config.num_heads) * head_dim
 
         # matmul FLOPs (6 * param_count for fwd+bwd)
         # Per layer:
@@ -382,7 +511,13 @@ class ModernLM(nn.Module):
         #           + 2 * d_model * seq_length  (attn @ V)
         #   Backward: 2x forward
         #   Total:  12 * d_model * seq_length per layer
-        flops += config.num_layers * 12 * config.num_heads * head_dim * config.seq_length
+        attn_flops = 0
+        for layer_type in config.layer_types:
+            window = config.seq_length if layer_type == "full" else config.sliding_window_size
+            effective_seq = config.seq_length if window < 0 else min(window, config.seq_length)
+            attn_flops += 12 * config.num_heads * head_dim * effective_seq
+
+        flops += attn_flops
 
         return flops
 

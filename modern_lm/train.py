@@ -173,11 +173,18 @@ def train_model(args: argparse.Namespace) -> None:
             d_model=args.d_model,
             num_layers=args.num_layers,
             num_heads=args.num_heads,
+            num_kv_heads=args.num_kv_heads,
             d_ff=args.d_ff,
             dropout=args.dropout,
             tie_weights=args.tie_weights,
+            rope_theta_full=args.rope_theta_full,
+            rope_theta_sliding=args.rope_theta_sliding,
+            sliding_window_size=args.sliding_window_size,
+            layer_types=args.layer_types,
+            partial_rotary_factor=args.partial_rotary_factor,
             attn_logit_softcapping=args.attn_logit_softcapping,
             final_logit_softcapping=args.final_logit_softcapping,
+            rms_norm_eps=args.rms_norm_eps,
         )
         model = ModernLM(modern_lm_config)
     else:
@@ -191,10 +198,7 @@ def train_model(args: argparse.Namespace) -> None:
                 raise ValueError(f'Missing key "{key}" in checkpoint')
         modern_lm_config = ModernLMConfig(**saved_states["config"])
         model = ModernLM(modern_lm_config)
-
     model.to(device)
-    if model.config.tie_weights:
-        model.tie_weights()
 
     if os.getenv("USE_FLASH_ATTN") == "1":
         master_print("USE_FLASH_ATTN is set, trying to use flash attention if available")
@@ -235,10 +239,13 @@ def train_model(args: argparse.Namespace) -> None:
             ),
         )
     elif args.lr_schedule == "wsd":
+        num_stable_steps = args.stable_steps or (
+            args.train_steps - args.warmup_steps - args.decay_steps
+        )
         lr_scheduler = utils.get_wsd_schedule(
             optimizer,
             num_warmup_steps=args.warmup_steps,
-            num_stable_steps=args.stable_steps,
+            num_stable_steps=num_stable_steps,
             num_decay_steps=args.decay_steps,
             min_lr_ratio=args.min_lr / learning_rate,
             decay_type=args.decay_type,
@@ -520,13 +527,17 @@ def train_model(args: argparse.Namespace) -> None:
             if args.is_master:
                 checkpoint_dict = {
                     "model": raw_model.state_dict(),
-                    "optimizer": optimizer.state_dict(),
-                    "lr_scheduler": lr_scheduler.state_dict(),
                     "config": vars(modern_lm_config),
                     "global_step": global_step + 1,
                 }
-                if scaler.is_enabled():
-                    checkpoint_dict["scaler"] = scaler.state_dict()
+                if not args.save_model_only:
+                    checkpoint_dict.update({
+                        "optimizer": optimizer.state_dict(),
+                        "lr_scheduler": lr_scheduler.state_dict(),
+                    })  # pyright: ignore
+
+                    if scaler.is_enabled():
+                        checkpoint_dict["scaler"] = scaler.state_dict()
                 utils.ensure_num_saved_checkpoints(
                     checkpoints_dir=args.checkpoints_dir,
                     model_basename="modern-lm",
