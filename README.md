@@ -44,9 +44,11 @@
 
 ### Dataset
 
-> TBD
+> See [./records](./records).
 
 ### Training
+
+> Detail training scripts can be found in [./records](./records).
 
 ```bash
 python -m modern_lm.train \
